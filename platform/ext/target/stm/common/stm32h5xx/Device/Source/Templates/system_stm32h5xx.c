@@ -322,6 +322,11 @@ static void SetSysClock(void)
 
   /* Enable the HSI48 oscillator (HSI48) for RNG peripheral */
   RCC->CR |= RCC_CR_HSI48ON;
+
+  /* SYSCLK is now PLL1 (~240 MHz). Refresh SystemCoreClock so UART baud,
+   * SysTick and HAL timeouts are computed from the real frequency rather
+   * than the 64 MHz HSI reset value. */
+  SystemCoreClockUpdate();
 }
 
 /**

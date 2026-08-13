@@ -33,6 +33,7 @@ extern volatile uint32_t uFlowStage;
 #include "tfm_plat_defs.h"
 /*  fix me to move to a CMSIS driver */
 #include "stm32h5xx_hal.h"
+#include "board.h"
 #include <stdio.h>
 //#include "tfm_mbedcrypto_config.h"
 /*#if !defined(MBEDTLS_CONFIG_FILE)
@@ -231,7 +232,7 @@ void enable_ns_clk_config(void)
 
 }
 /*----------------- GPIO Pin mux configuration for non secure --------------- */
-/*  set all pin mux to un-secure */
+/*  set all pin mux to un-secure, except the console UART used by SPE logs */
 void pinmux_init_cfg(void)
 {
 #if defined(GPIOA)
@@ -279,6 +280,12 @@ void pinmux_init_cfg(void)
   GPIOK_S->SECCFGR = 0x0;
 #endif
 
+  /* A secure USART cannot drive non-secure pins. Keep the ST-Link VCP
+   * TX/RX pins secure so TF-M/BL2 logs remain visible after isolation. */
+  COM_TX_GPIO_CLK_ENABLE();
+  COM_RX_GPIO_CLK_ENABLE();
+  COM_TX_GPIO_PORT->SECCFGR |= COM_TX_PIN;
+  COM_RX_GPIO_PORT->SECCFGR |= COM_RX_PIN;
 }
 /*------------------- SAU/IDAU configuration functions -----------------------*/
 
