@@ -18,11 +18,7 @@
   */
 #ifndef __BOARD_H__
 #define __BOARD_H__
-/* config for usart
- *
- * STM32H573I-DK ST-Link VCP is USART1 on PA9 (TX) / PA10 (RX), 115200 8N1.
- * USART3 (PD8/PD9) is kept behind #if 0 for Morpho/Arduino connectors.
- */
+/* config for usart */
 
 #if 0
 #define COM_INSTANCE                           USART3

@@ -148,10 +148,6 @@ void SystemInit(void)
    SCB->CPACR |= ((3UL << 20U)|(3UL << 22U));  /* set CP10 and CP11 Full Access */
     SCB_NS->CPACR |= ((3UL << 20U)|(3UL << 22U));  /* set CP10 and CP11 Full Access */
   #endif
-
-  /* BL2 already switched SYSCLK to PLL1. Recalculate SystemCoreClock so the
-   * secure UART baud rate matches the actual 240 MHz bus clock. */
-  SystemCoreClockUpdate();
 }
 
 /**
