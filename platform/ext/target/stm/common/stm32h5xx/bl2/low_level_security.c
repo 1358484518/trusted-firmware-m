@@ -737,18 +737,8 @@ void LL_SECU_CheckStaticProtections(void)
   if ((flash_option_bytes_bank1.USERConfig & FLASH_OPTSR_BOOT_UBE) != OB_UBE_OEM_IROT)
 #endif
   {
-    BOOT_LOG_INF("BOOT_UBE 0x%x",
-                 (int)(flash_option_bytes_bank1.USERConfig & FLASH_OPTSR_BOOT_UBE));
-#ifndef TFM_ENABLE_SET_OB
     BOOT_LOG_ERR("Unexpected value for BOOT UBE configuration");
     Error_Handler();
-#else
-    BOOT_LOG_ERR("Unexpected value for BOOT UBE configuration: set OEM-iRoT");
-    flash_option_bytes_bank1.USERConfig =
-        (flash_option_bytes_bank1.USERConfig & ~FLASH_OPTSR_BOOT_UBE) | OB_UBE_OEM_IROT;
-    flash_option_bytes_bank1.USERType |= OB_USER_BOOT_UBE;
-    flash_option_bytes_bank1.OptionType |= OPTIONBYTE_USER;
-#endif /* TFM_ENABLE_SET_OB */
   }
 
   /* Check secure boot address */
