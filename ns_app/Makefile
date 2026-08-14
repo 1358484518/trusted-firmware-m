@@ -1,7 +1,11 @@
 # Bare-metal NS image for STM32H573I-DK, linked against TF-M SPE export.
 #
+# Supported layouts:
+#   Makefile, main.c, api_ns/     (siblings)
+#   ns_app/{Makefile,main.c}  +  ../build_s/api_ns
+#
 #   make
-#   make SPE=/path/to/build_s/api_ns
+#   make SPE=/path/to/api_ns
 #   make TOOLCHAIN_DIR=/path/to/arm-gnu-toolchain/bin
 #   make clean
 #
@@ -10,7 +14,11 @@
 
 NS_APP      := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 ROOT        := $(abspath $(NS_APP)/..)
+ifeq ($(wildcard $(NS_APP)/api_ns/interface/lib/s_veneers.o),)
 SPE         ?= $(ROOT)/build_s/api_ns
+else
+SPE         ?= $(NS_APP)/api_ns
+endif
 OUT         := $(NS_APP)/out
 OBJDIR      := $(OUT)/obj
 
@@ -73,7 +81,7 @@ LDFLAGS     := $(CPU) -specs=nano.specs -specs=nosys.specs \
 
 APP_SRCS := \
 	$(NS_APP)/main.c \
-	$(ROOT)/platform/ext/common/syscalls_stub.c
+	$(NS_APP)/syscalls_stub.c
 
 SPE_SRCS := \
 	$(SPE)/interface/src/os_wrapper/tfm_ns_interface_bare_metal.c \
