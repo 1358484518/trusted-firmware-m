@@ -144,17 +144,23 @@ $(OUT)/tfm_ns.hex: $(OUT)/tfm_ns.axf
 	$(OBJCOPY) -O ihex $< $@
 
 # imgtool (wrapper.py) needs: intelhex click cryptography cbor2
-#   make python-deps
+# wrapper.py also does "import bl2.macro_parser"; api_ns ships macro_parser.py
+# but not the bl2 package. Build a tiny shim on PYTHONPATH.
 .PHONY: python-deps
 python-deps:
 	$(PYTHON) -m pip install intelhex click cryptography cbor2
 
+BL2_PY := $(OUT)/pypath
+
 $(OUT)/tfm_ns_signed.bin: $(OUT)/tfm_ns.bin $(OUT)/tfm_ns.hex
 	@echo "SIGN $(notdir $@)"
 	@$(PYTHON) -c "import intelhex, click, cryptography, cbor2" || \
-		(echo "缺少 imgtool 依赖，请执行:  make python-deps"; \
-		 echo "或:  $(PYTHON) -m pip install intelhex click cryptography cbor2"; exit 1)
-	cd $(SPE)/image_signing/scripts && $(PYTHON) wrapper.py \
+		(echo "Missing imgtool Python deps. Run: make python-deps"; \
+		 echo "or: $(PYTHON) -m pip install intelhex click cryptography cbor2"; exit 1)
+	mkdir -p $(BL2_PY)/bl2
+	touch $(BL2_PY)/bl2/__init__.py
+	cp -f $(SPE)/image_signing/scripts/macro_parser.py $(BL2_PY)/bl2/macro_parser.py
+	cd $(SPE)/image_signing/scripts && PYTHONPATH=$(BL2_PY):$$PYTHONPATH $(PYTHON) wrapper.py \
 		--version 0.0.0 \
 		--layout $(SPE)/image_signing/layout_files/signing_layout_ns.o \
 		--key $(SPE)/image_signing/keys/image_ns_signing_private_key.pem \
