@@ -19,6 +19,9 @@ localrepos.cmake
 **/__pycache__
 *.pyc
 
+# Local NS smoke-test build output
+ns_app/out/
+
 .clang-format
 **/.DS_Store
 
