@@ -12,10 +12,9 @@
 # CPU/ABI must match SPE: cortex-m33+nodsp+nofp, soft float.
 # s_veneers.o is linked as a raw object (absolute NSC addresses).
 #
-# NS bring-up matches tf-m-tests/app_broker/main_ns.c without RTX
-# (tfm_ns_platform_init -> stdio_init -> uart_stdout).
-# system_ns.c / low_level_com.c keep SPE's PLL and USART1 BRR; the api_ns
-# Templates SystemInit + HAL_UART_Init rewrite baud after TEST_S.
+# NS bring-up matches tf-m-tests/app_broker/main_ns.c without RTX.
+# Only main.c is local. Other sources are copied from TF-M / tf-m-tests
+# or compiled from the SPE api_ns export.
 
 NS_APP      := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 ROOT        := $(abspath $(NS_APP)/..)
@@ -87,9 +86,7 @@ LDFLAGS     := $(CPU) -specs=nano.specs -specs=nosys.specs \
 APP_SRCS := \
 	$(NS_APP)/main.c \
 	$(NS_APP)/syscalls_stub.c \
-	$(NS_APP)/platform_init_def.c \
-	$(NS_APP)/system_ns.c \
-	$(NS_APP)/low_level_com.c
+	$(NS_APP)/platform_init_def.c
 
 SPE_SRCS := \
 	$(SPE)/interface/src/os_wrapper/tfm_ns_interface_bare_metal.c \
@@ -101,7 +98,9 @@ SPE_SRCS := \
 	$(SPE)/interface/src/tfm_attest_api.c \
 	$(SPE)/interface/src/tfm_platform_api.c \
 	$(SPE)/platform/Device/Source/startup_stm32h5xx_ns.c \
+	$(SPE)/platform/Device/Source/system_stm32h5xx.c \
 	$(SPE)/platform/ext/common/uart_stdout.c \
+	$(SPE)/platform/hal/CMSIS_Driver/low_level_com.c \
 	$(SPE)/platform/hal/Src/stm32h5xx_hal.c \
 	$(SPE)/platform/hal/Src/stm32h5xx_hal_cortex.c \
 	$(SPE)/platform/hal/Src/stm32h5xx_hal_dma.c \
