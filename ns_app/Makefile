@@ -143,8 +143,17 @@ $(OUT)/tfm_ns.bin: $(OUT)/tfm_ns.axf
 $(OUT)/tfm_ns.hex: $(OUT)/tfm_ns.axf
 	$(OBJCOPY) -O ihex $< $@
 
+# imgtool (wrapper.py) needs: intelhex click cryptography cbor2
+#   make python-deps
+.PHONY: python-deps
+python-deps:
+	$(PYTHON) -m pip install intelhex click cryptography cbor2
+
 $(OUT)/tfm_ns_signed.bin: $(OUT)/tfm_ns.bin $(OUT)/tfm_ns.hex
 	@echo "SIGN $(notdir $@)"
+	@$(PYTHON) -c "import intelhex, click, cryptography, cbor2" || \
+		(echo "缺少 imgtool 依赖，请执行:  make python-deps"; \
+		 echo "或:  $(PYTHON) -m pip install intelhex click cryptography cbor2"; exit 1)
 	cd $(SPE)/image_signing/scripts && $(PYTHON) wrapper.py \
 		--version 0.0.0 \
 		--layout $(SPE)/image_signing/layout_files/signing_layout_ns.o \
