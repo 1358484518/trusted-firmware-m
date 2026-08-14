@@ -6,6 +6,8 @@
  *   tfm_ns_cp_init()
  *   tfm_ns_interface_init()
  *
+ * STM32H5 NS must not retune PLL or rewrite USART1 BRR (SPE already did).
+ *
  * Requires the matching flashed tfm_s.bin (s_veneers.o addresses must match).
  * USART1 / ST-Link VCP: 115200 8N1, JP1 not fitted.
  *
