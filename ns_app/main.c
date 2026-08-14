@@ -1,6 +1,11 @@
 /*
  * Bare-metal NS smoke test for STM32H573I-DK + TF-M SPE.
  *
+ * Bring-up follows tf-m-tests/app_broker/main_ns.c (without RTX):
+ *   tfm_ns_platform_init() -> stdio_init()
+ *   tfm_ns_cp_init()
+ *   tfm_ns_interface_init()
+ *
  * Requires the matching flashed tfm_s.bin (s_veneers.o addresses must match).
  * USART1 / ST-Link VCP: 115200 8N1, JP1 not fitted.
  *
@@ -12,6 +17,8 @@
 #include <string.h>
 #include <stdint.h>
 
+#include "Driver_USART.h"
+#include "tfm_plat_ns.h"
 #include "tfm_ns_interface.h"
 #include "os_wrapper/common.h"
 
@@ -126,6 +133,16 @@ static void test_fwu_query(void)
 
 int main(void)
 {
+    if (tfm_ns_platform_init() != ARM_DRIVER_OK) {
+        for (;;) {
+        }
+    }
+
+    if (tfm_ns_cp_init() != ARM_DRIVER_OK) {
+        for (;;) {
+        }
+    }
+
     setvbuf(stdout, NULL, _IONBF, 0);
 
     printf("\r\nNS-SMOKE\r\n");

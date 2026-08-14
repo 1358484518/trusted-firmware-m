@@ -12,8 +12,8 @@
 # CPU/ABI must match SPE: cortex-m33+nodsp+nofp, soft float.
 # s_veneers.o is linked as a raw object (absolute NSC addresses).
 #
-# Do not use api_ns system_stm32h5xx.c (SetSysClock from NS) or stdio_init()
-# (HAL_UART_Init overwrites SPE's USART1 baud). See system_ns.c / uart_ns.c.
+# Platform sources match api_ns platform_ns (same as tf-m-tests).
+# NS bring-up matches tf-m-tests/app_broker/main_ns.c without RTX.
 
 NS_APP      := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 ROOT        := $(abspath $(NS_APP)/..)
@@ -47,7 +47,6 @@ CPPFLAGS    := \
 	-DSTM32H573xx \
 	-DUSE_HAL_DRIVER \
 	-DDOMAIN_NS=1 \
-	-D__DOMAIN_NS=1 \
 	-DCONFIG_TFM_FLOAT_ABI=0 \
 	-DPLATFORM_DEFAULT_CRYPTO_KEYS \
 	-DCONFIG_TFM_USE_TRUSTZONE \
@@ -86,8 +85,7 @@ LDFLAGS     := $(CPU) -specs=nano.specs -specs=nosys.specs \
 APP_SRCS := \
 	$(NS_APP)/main.c \
 	$(NS_APP)/syscalls_stub.c \
-	$(NS_APP)/system_ns.c \
-	$(NS_APP)/uart_ns.c
+	$(NS_APP)/platform_init_def.c
 
 SPE_SRCS := \
 	$(SPE)/interface/src/os_wrapper/tfm_ns_interface_bare_metal.c \
@@ -98,7 +96,21 @@ SPE_SRCS := \
 	$(SPE)/interface/src/tfm_fwu_api.c \
 	$(SPE)/interface/src/tfm_attest_api.c \
 	$(SPE)/interface/src/tfm_platform_api.c \
-	$(SPE)/platform/Device/Source/startup_stm32h5xx_ns.c
+	$(SPE)/platform/Device/Source/startup_stm32h5xx_ns.c \
+	$(SPE)/platform/Device/Source/system_stm32h5xx.c \
+	$(SPE)/platform/ext/common/uart_stdout.c \
+	$(SPE)/platform/hal/CMSIS_Driver/low_level_com.c \
+	$(SPE)/platform/hal/Src/stm32h5xx_hal.c \
+	$(SPE)/platform/hal/Src/stm32h5xx_hal_cortex.c \
+	$(SPE)/platform/hal/Src/stm32h5xx_hal_dma.c \
+	$(SPE)/platform/hal/Src/stm32h5xx_hal_dma_ex.c \
+	$(SPE)/platform/hal/Src/stm32h5xx_hal_gpio.c \
+	$(SPE)/platform/hal/Src/stm32h5xx_hal_pwr.c \
+	$(SPE)/platform/hal/Src/stm32h5xx_hal_pwr_ex.c \
+	$(SPE)/platform/hal/Src/stm32h5xx_hal_rcc.c \
+	$(SPE)/platform/hal/Src/stm32h5xx_hal_rcc_ex.c \
+	$(SPE)/platform/hal/Src/stm32h5xx_hal_uart.c \
+	$(SPE)/platform/hal/Src/stm32h5xx_hal_uart_ex.c
 
 SRCS        := $(APP_SRCS) $(SPE_SRCS)
 OBJS        := $(addprefix $(OBJDIR)/,$(notdir $(SRCS:.c=.o)))
