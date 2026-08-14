@@ -3,13 +3,15 @@
  *
  * Requires the matching flashed tfm_s.bin (s_veneers.o addresses must match).
  * USART1 / ST-Link VCP: 115200 8N1, JP1 not fitted.
+ *
+ * If SPE was built with TEST_S=ON, colored "PASSED" / "*** End of Secure
+ * test suites ***" prints first. This app then prints NS-SMOKE.
  */
 
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 
-#include "uart_stdout.h"
 #include "tfm_ns_interface.h"
 #include "os_wrapper/common.h"
 
@@ -124,10 +126,10 @@ static void test_fwu_query(void)
 
 int main(void)
 {
-    stdio_init();
     setvbuf(stdout, NULL, _IONBF, 0);
 
-    printf("\r\nNS app start\r\n");
+    printf("\r\nNS-SMOKE\r\n");
+    printf("NS app start\r\n");
 
     if (tfm_ns_interface_init() != OS_WRAPPER_SUCCESS) {
         printf("tfm_ns_interface_init failed\r\n");
