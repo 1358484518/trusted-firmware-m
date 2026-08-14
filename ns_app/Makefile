@@ -13,6 +13,7 @@
 # s_veneers.o is linked as a raw object (absolute NSC addresses).
 #
 # NS bring-up matches tf-m-tests/app_broker/main_ns.c without RTX.
+# Logging matches official NS tests: LOG_MSG / tfm_log_raw.c / -DTFM_NS_LOG.
 # Only main.c is local. Other sources are copied from TF-M / tf-m-tests
 # or compiled from the SPE api_ns export.
 
@@ -65,6 +66,8 @@ CPPFLAGS    := \
 	-DBL2_HEADER_SIZE=0x400 \
 	-DBL2_TRAILER_SIZE=0x2000 \
 	-DMCUBOOT_IMAGE_NUMBER=2 \
+	-DTFM_NS_LOG \
+	-I$(NS_APP) \
 	-I$(SPE)/interface/include \
 	-I$(SPE)/interface/include/crypto_keys \
 	-I$(SPE)/platform/include \
@@ -86,7 +89,8 @@ LDFLAGS     := $(CPU) -specs=nano.specs -specs=nosys.specs \
 APP_SRCS := \
 	$(NS_APP)/main.c \
 	$(NS_APP)/syscalls_stub.c \
-	$(NS_APP)/platform_init_def.c
+	$(NS_APP)/platform_init_def.c \
+	$(NS_APP)/tfm_log_raw.c
 
 SPE_SRCS := \
 	$(SPE)/interface/src/os_wrapper/tfm_ns_interface_bare_metal.c \

@@ -6,6 +6,9 @@
  *   tfm_ns_cp_init()
  *   tfm_ns_interface_init()
  *
+ * Logging matches tf-m-tests: LOG_MSG -> tfm_log_printf -> stdio_output_string.
+ * Do not use newlib printf (official NS tests never do).
+ *
  * All other C files come from TF-M or tf-m-tests (or the SPE api_ns export).
  *
  * Requires the matching flashed tfm_s.bin (s_veneers.o addresses must match).
@@ -15,7 +18,6 @@
  * test suites ***" prints first. This app then prints NS-SMOKE.
  */
 
-#include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 
@@ -23,6 +25,7 @@
 #include "tfm_plat_ns.h"
 #include "tfm_ns_interface.h"
 #include "os_wrapper/common.h"
+#include "test_log.h"
 
 #include "psa/crypto.h"
 #include "psa/error.h"
@@ -31,12 +34,23 @@
 
 static int g_fail;
 
+/* tfm_log_printf has no %02x; print two lowercase hex digits per byte. */
+static void log_hex(const uint8_t *buf, size_t len)
+{
+    size_t i;
+
+    for (i = 0; i < len; i++) {
+        LOG_MSG("%x%x", (unsigned)((buf[i] >> 4) & 0xfu),
+                (unsigned)(buf[i] & 0xfu));
+    }
+}
+
 static void check(const char *what, psa_status_t status)
 {
     if (status == PSA_SUCCESS) {
-        printf("  [PASS] %s\r\n", what);
+        LOG_MSG("  [PASS] %s\r\n", what);
     } else {
-        printf("  [FAIL] %s status=%d\r\n", what, (int)status);
+        LOG_MSG("  [FAIL] %s status=%d\r\n", what, (int)status);
         g_fail++;
     }
 }
@@ -55,7 +69,7 @@ static void test_crypto(void)
     size_t hash_len = 0;
     psa_status_t status;
 
-    printf("PSA Crypto\r\n");
+    LOG_MSG("PSA Crypto\r\n");
     status = psa_crypto_init();
     check("psa_crypto_init", status);
     if (status != PSA_SUCCESS) {
@@ -66,17 +80,15 @@ static void test_crypto(void)
                               hash, sizeof(hash), &hash_len);
     check("psa_hash_compute(SHA-256)", status);
     if (status == PSA_SUCCESS) {
-        printf("  hash=");
-        for (size_t i = 0; i < hash_len; i++) {
-            printf("%02x", hash[i]);
-        }
-        printf("\r\n");
+        LOG_MSG("  hash=");
+        log_hex(hash, hash_len);
+        LOG_MSG("\r\n");
         if ((hash_len != sizeof(expect)) ||
             (memcmp(hash, expect, sizeof(expect)) != 0)) {
-            printf("  [FAIL] SHA-256 known-answer mismatch\r\n");
+            LOG_MSG("  [FAIL] SHA-256 known-answer mismatch\r\n");
             g_fail++;
         } else {
-            printf("  [PASS] SHA-256 known-answer\r\n");
+            LOG_MSG("  [PASS] SHA-256 known-answer\r\n");
         }
     }
 }
@@ -89,7 +101,7 @@ static void test_its(void)
     size_t read_len = 0;
     psa_status_t status;
 
-    printf("PSA ITS\r\n");
+    LOG_MSG("PSA ITS\r\n");
     (void)psa_its_remove(uid);
 
     status = psa_its_set(uid, sizeof(payload), payload, PSA_STORAGE_FLAG_NONE);
@@ -101,7 +113,7 @@ static void test_its(void)
     if ((status == PSA_SUCCESS) &&
         ((read_len != sizeof(payload)) ||
          (memcmp(readback, payload, sizeof(payload)) != 0))) {
-        printf("  [FAIL] ITS payload mismatch\r\n");
+        LOG_MSG("  [FAIL] ITS payload mismatch\r\n");
         g_fail++;
     }
 
@@ -114,22 +126,22 @@ static void test_fwu_query(void)
     psa_fwu_component_info_t info;
     psa_status_t status;
 
-    printf("PSA FWU query\r\n");
+    LOG_MSG("PSA FWU query\r\n");
 
     memset(&info, 0, sizeof(info));
     status = psa_fwu_query(FWU_COMPONENT_ID_SECURE, &info);
     check("psa_fwu_query(S)", status);
     if (status == PSA_SUCCESS) {
-        printf("  S  state=%u max_size=%lu\r\n",
-               (unsigned)info.state, (unsigned long)info.max_size);
+        LOG_MSG("  S  state=%u max_size=%u\r\n",
+                (unsigned)info.state, (unsigned)info.max_size);
     }
 
     memset(&info, 0, sizeof(info));
     status = psa_fwu_query(FWU_COMPONENT_ID_NONSECURE, &info);
     check("psa_fwu_query(NS)", status);
     if (status == PSA_SUCCESS) {
-        printf("  NS state=%u max_size=%lu\r\n",
-               (unsigned)info.state, (unsigned long)info.max_size);
+        LOG_MSG("  NS state=%u max_size=%u\r\n",
+                (unsigned)info.state, (unsigned)info.max_size);
     }
 }
 
@@ -145,26 +157,24 @@ int main(void)
         }
     }
 
-    setvbuf(stdout, NULL, _IONBF, 0);
-
-    printf("\r\nNS-SMOKE\r\n");
-    printf("NS app start\r\n");
+    LOG_MSG("\r\nNS-SMOKE\r\n");
+    LOG_MSG("Non-Secure system starting...\r\n");
 
     if (tfm_ns_interface_init() != OS_WRAPPER_SUCCESS) {
-        printf("tfm_ns_interface_init failed\r\n");
+        LOG_MSG("tfm_ns_interface_init failed\r\n");
         for (;;) {
         }
     }
-    printf("tfm_ns_interface_init ok\r\n");
+    LOG_MSG("tfm_ns_interface_init ok\r\n");
 
     test_crypto();
     test_its();
     test_fwu_query();
 
     if (g_fail == 0) {
-        printf("ALL PASSED\r\n");
+        LOG_MSG("ALL PASSED\r\n");
     } else {
-        printf("FAILED count=%d\r\n", g_fail);
+        LOG_MSG("FAILED count=%d\r\n", g_fail);
     }
 
     for (;;) {
