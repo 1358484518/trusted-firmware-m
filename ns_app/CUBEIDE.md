@@ -7,6 +7,17 @@ NS 源码：该目录下的 **`ns_app/`**（从已 `make` 通过的 `~/test/libs
 
 本文记录的是「删掉 CubeMX 点灯运行时 + 托管编译 ns_app」这套已经编过、veneer 地址核对过的配置。
 
+文件拷贝可用脚本（不改 `.cproject`，工程选项仍要按下文配一次）：
+
+```bash
+chmod +x import_to_cubeide.sh
+./import_to_cubeide.sh --lib ~/test/libs --cube ~/test/tfmminiproject
+# 或直接指向 STM32CubeIDE 子目录
+./import_to_cubeide.sh --lib ~/test/libs --cube ~/test/tfmminiproject/STM32CubeIDE
+# 覆盖已有 ns_app、不问确认：
+./import_to_cubeide.sh --force --lib ~/test/libs --cube ~/test/tfmminiproject
+```
+
 ---
 
 ## 1. 目录（改完后）
