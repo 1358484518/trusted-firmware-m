@@ -4,7 +4,7 @@
 # 用法:
 #   ./buildtfm.sh              # 交互选择 测试版 / 正式版
 #   ./buildtfm.sh test         # 测试版：TEST_S/NS 回归
-#   ./buildtfm.sh prod         # 正式版：无测试分区，只编 SPE/BL2
+#   ./buildtfm.sh prod         # 正式版：无测试分区，仍编 SPE + NS
 #   ./buildtfm.sh -h
 #
 # SPDX-License-Identifier: BSD-3-Clause
@@ -18,7 +18,7 @@ STM32H573I-DK TF-M 编译脚本（已启用硬件浮点 FPv5-SP-D16）
 用法:
   ./buildtfm.sh              交互选择构建类型
   ./buildtfm.sh test         测试版（安全/非安全回归测试）
-  ./buildtfm.sh prod         正式版（关闭 TEST_S/TEST_NS，不编测试 NS）
+  ./buildtfm.sh prod         正式版（关闭 TEST_S/TEST_NS，仍编 NS 镜像）
 
 别名: test|debug|回归    prod|release|formal|正式
 EOF
@@ -40,7 +40,7 @@ esac
 if [[ -z "${BUILD_TYPE}" ]]; then
     echo "请选择构建类型:"
     echo "  1) 测试版  — 打开 TEST_S / TEST_NS，编回归 NS"
-    echo "  2) 正式版  — 关闭测试代码，只编 BL2 + SPE（给产品 NS 用）"
+    echo "  2) 正式版  — 关闭测试代码，编 BL2 + SPE + NS（无回归套件）"
     echo -n "输入 1 或 2: "
     read -r choice
     case "${choice}" in
@@ -180,21 +180,21 @@ SPE_CONFIG="${TFM_ROOT}/build_s/api_ns/cmake/spe_config.cmake"
 
 if [[ "${BUILD_TYPE}" == "test" ]]; then
     echo ">>> build_ns (回归测试)"
-    rm -rf build_ns
-    mkdir -p "${LIB_EXT_NS}"
-    for lib in qcbor t_cose; do
-        [[ -d "${LIB_EXT_S}/${lib}-src" ]] && cp -a "${LIB_EXT_S}/${lib}-src" "${LIB_EXT_NS}/"
-    done
-
-    cmake -S "${TFM_TESTS}/tests_reg" -B build_ns -GNinja \
-        -DCONFIG_SPE_PATH="${TFM_ROOT}/build_s/api_ns" \
-        -DTFM_TOOLCHAIN_FILE="${TFM_ROOT}/build_s/api_ns/cmake/toolchain_ns_GNUARM.cmake" \
-        "${FETCH_OFF[@]}"
-
-    ninja -C build_ns -j"$(nproc)"
 else
-    echo ">>> 正式版跳过 tests_reg NS。产品 NS 请用 build_s/api_ns 自行编译。"
+    echo ">>> build_ns (正式版，无 TEST_NS 套件)"
 fi
+rm -rf build_ns
+mkdir -p "${LIB_EXT_NS}"
+for lib in qcbor t_cose; do
+    [[ -d "${LIB_EXT_S}/${lib}-src" ]] && cp -a "${LIB_EXT_S}/${lib}-src" "${LIB_EXT_NS}/"
+done
+
+cmake -S "${TFM_TESTS}/tests_reg" -B build_ns -GNinja \
+    -DCONFIG_SPE_PATH="${TFM_ROOT}/build_s/api_ns" \
+    -DTFM_TOOLCHAIN_FILE="${TFM_ROOT}/build_s/api_ns/cmake/toolchain_ns_GNUARM.cmake" \
+    "${FETCH_OFF[@]}"
+
+ninja -C build_ns -j"$(nproc)"
 
 echo ">>> postbuild"
 cd build_s/api_ns
@@ -208,8 +208,7 @@ echo "=== 编译完成（${BUILD_LABEL}，硬件浮点 ON）==="
 echo "烧录: cd ${TFM_ROOT}/build_s/api_ns && ./regression.sh"
 echo "      STM32_Programmer_CLI -c port=SWD mode=HotPlug -ob BOOT_UBE=0xB4"
 echo "      ./TFM_UPDATE.sh"
+echo "NS 镜像: ${TFM_ROOT}/build_ns/bin/tfm_ns_signed.bin  地址 0x0C088000"
 if [[ "${BUILD_TYPE}" == "prod" ]]; then
-    echo ""
-    echo "正式版未生成测试 NS。NS 应用链接目录: ${TFM_ROOT}/build_s/api_ns"
-    echo "NS 主槽地址: 0x0C088000"
+    echo "正式版 NS 不含回归测试，可直接烧录或替换为产品 NS。"
 fi
