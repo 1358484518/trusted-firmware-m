@@ -1,5 +1,8 @@
 * text=auto
 
+sign_kit/*.bat text eol=crlf
+sign_kit/*.sh text eol=lf
+
 # Explicitly declare text files to make sure possible local wrong config
 # of git does not override them on checkout
 *.patch text eol=lf

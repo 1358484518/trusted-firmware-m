@@ -4,11 +4,23 @@
 
 ## 用法
 
+Linux / macOS：
+
 ```bash
 cd sign_kit
 ./sign.sh tfm_ns.bin     # 非安全
 ./sign.sh sapp.bin       # 安全
 ```
+
+Windows（命令提示符或 PowerShell）：
+
+```bat
+cd sign_kit
+sign.bat tfm_ns.bin
+sign.bat sapp.bin
+```
+
+也可以把 `.bin` 拖到 `sign.bat` 上。
 
 输出在本目录：`tfm_ns_signed.bin` / `sapp_signed.bin`。
 
@@ -19,13 +31,24 @@ cd sign_kit
 ./sign.sh s   app.bin
 ```
 
+```bat
+sign.bat ns  app.bin
+sign.bat s   app.bin
+```
+
 ## 首次依赖
 
 ```bash
 python3 -m pip install -r requirements.txt
 ```
 
-仓库里已有 `.venv` 时脚本会自动用它。
+Windows：
+
+```bat
+py -3 -m pip install -r requirements.txt
+```
+
+已有 `.venv` 时脚本会自动用它。
 
 ## 烧录地址（STM32H573I-DK）
 
