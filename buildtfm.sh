@@ -3,8 +3,8 @@
 #
 # 用法:
 #   ./buildtfm.sh              # 交互选择 测试版 / 正式版
-#   ./buildtfm.sh test         # 测试版：TEST_S/NS 回归，INFO 日志
-#   ./buildtfm.sh prod         # 正式版：同样编可烧可跑的 NS 测试程序，ERROR 日志
+#   ./buildtfm.sh test         # 测试版：TEST_S/NS 全开，INFO 日志
+#   ./buildtfm.sh prod         # 正式版：SPE 不带 S 测试分区，NS 测试程序可烧可跑，ERROR 日志
 #   ./buildtfm.sh -h
 #
 # SPDX-License-Identifier: BSD-3-Clause
@@ -17,8 +17,8 @@ STM32H573I-DK TF-M 编译脚本（已启用硬件浮点 FPv5-SP-D16）
 
 用法:
   ./buildtfm.sh              交互选择构建类型
-  ./buildtfm.sh test         测试版（TEST_S/NS 回归，INFO 日志）
-  ./buildtfm.sh prod         正式版（同样出可烧可跑的 NS 测试程序，ERROR 日志）
+  ./buildtfm.sh test         测试版（TEST_S + TEST_NS，INFO 日志）
+  ./buildtfm.sh prod         正式版（TEST_S 关，TEST_NS 开，NS 测试可烧可跑，ERROR 日志）
 
 别名: test|debug|回归    prod|release|formal|正式
 EOF
@@ -39,8 +39,8 @@ esac
 
 if [[ -z "${BUILD_TYPE}" ]]; then
     echo "请选择构建类型:"
-    echo "  1) 测试版  — TEST_S / TEST_NS 全开，INFO 日志，NS 测试可烧可跑"
-    echo "  2) 正式版  — 同样编 NS 测试程序（可烧可跑），日志收到 ERROR"
+    echo "  1) 测试版  — TEST_S / TEST_NS 全开，INFO 日志"
+    echo "  2) 正式版  — 安全侧不带测试分区，NS 测试程序仍可烧可跑，ERROR 日志"
     echo -n "输入 1 或 2: "
     read -r choice
     case "${choice}" in
@@ -89,8 +89,8 @@ if [[ "${BUILD_TYPE}" == "test" ]]; then
     )
 else
     BUILD_LABEL="正式版"
-    # 正式版也要出能下载、能跑的 NS 测试程序，只把日志收到 ERROR
-    TEST_FLAGS=(-DTEST_S=ON -DTEST_NS=ON)
+    # 正式 SPE 不编安全侧测试分区；NS 仍是可烧、可跑的回归测试程序
+    TEST_FLAGS=(-DTEST_S=OFF -DTEST_NS=ON)
     LOG_FLAGS=(
         -DTFM_BL2_LOG_LEVEL=LOG_LEVEL_ERROR
         -DTFM_SPM_LOG_LEVEL=LOG_LEVEL_ERROR
@@ -111,6 +111,14 @@ echo ">>> 构建类型:  ${BUILD_LABEL}  (硬件浮点 ON, fpv5-sp-d16)"
 
 LIB_EXT_S="${TFM_ROOT}/build_s/build-spe/lib/ext"
 LIB_EXT_NS="${TFM_ROOT}/build_ns/lib/ext"
+
+# 测试版 <-> 正式版或 TEST_* 变化时清掉 SPE 缓存（须在离线检查之前）
+STAMP="${TFM_ROOT}/build_s/.buildtfm_type"
+STAMP_VAL="${BUILD_TYPE} ${TEST_FLAGS[*]} ${LOG_FLAGS[*]}"
+if [[ -f "${STAMP}" ]] && [[ "$(cat "${STAMP}")" != "${STAMP_VAL}" ]]; then
+    echo ">>> 构建配置已切换，清理 build_s"
+    rm -rf "${TFM_ROOT}/build_s"
+fi
 
 # Python：用 python -m pip，避免拷贝来的 venv shebang 失效
 VENV_DIR="${WORK_ROOT}/.venv"
@@ -153,13 +161,6 @@ if [[ -f "${CV}" ]] && ! grep -q 'buildtfm: skip version check' "${CV}"; then
     sed -i '8i\return() # buildtfm: skip version check' "${CV}"
 fi
 
-# 测试版 <-> 正式版切换时清掉 SPE 缓存，避免 TEST_* 残留
-STAMP="${TFM_ROOT}/build_s/.buildtfm_type"
-if [[ -f "${STAMP}" ]] && [[ "$(cat "${STAMP}")" != "${BUILD_TYPE}" ]]; then
-    echo ">>> 构建类型已切换，清理 build_s"
-    rm -rf "${TFM_ROOT}/build_s"
-fi
-
 echo ">>> build_s (${BUILD_LABEL})"
 cmake -S "${TFM_TESTS}/tests_reg/spe" -B build_s -GNinja \
     -DCONFIG_TFM_SOURCE_PATH="${TFM_ROOT}" \
@@ -173,7 +174,8 @@ cmake -S "${TFM_TESTS}/tests_reg/spe" -B build_s -GNinja \
     "${FETCH_OFF[@]}"
 
 ninja -C build_s install -j"$(nproc)"
-echo "${BUILD_TYPE}" > "${STAMP}"
+mkdir -p "$(dirname "${STAMP}")"
+echo "${STAMP_VAL}" > "${STAMP}"
 
 SPE_CONFIG="${TFM_ROOT}/build_s/api_ns/cmake/spe_config.cmake"
 [[ -f "${SPE_CONFIG}" ]] && \
@@ -189,6 +191,7 @@ done
 cmake -S "${TFM_TESTS}/tests_reg" -B build_ns -GNinja \
     -DCONFIG_SPE_PATH="${TFM_ROOT}/build_s/api_ns" \
     -DTFM_TOOLCHAIN_FILE="${TFM_ROOT}/build_s/api_ns/cmake/toolchain_ns_GNUARM.cmake" \
+    "${FP_FLAGS[@]}" \
     "${FETCH_OFF[@]}"
 
 ninja -C build_ns -j"$(nproc)"
