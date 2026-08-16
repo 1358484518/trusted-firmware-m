@@ -214,3 +214,9 @@ echo "      STM32_Programmer_CLI -c port=SWD mode=HotPlug -ob BOOT_UBE=0xB4"
 echo "      ./TFM_UPDATE.sh"
 echo "NS 测试程序: ${TFM_ROOT}/build_ns/bin/tfm_ns_signed.bin  地址 0x0C088000"
 echo "烧录后会上电自动跑回归测试（串口 115200 看 PASSED/FAILED）。"
+
+# 打一份可拷到本机 Ubuntu 的回归/下载包
+if [[ -x "${TFM_ROOT}/packflash.sh" ]]; then
+    echo ""
+    "${TFM_ROOT}/packflash.sh" "${TFM_ROOT}"
+fi
