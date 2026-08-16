@@ -24,6 +24,8 @@ fi
 BL2="${TFM_ROOT}/build_s/bin/bl2.bin"
 SBIN="${TFM_ROOT}/build_s/bin/tfm_s_signed.bin"
 NSBIN="${TFM_ROOT}/build_ns/bin/tfm_ns_signed.bin"
+S_UNSIGN="${TFM_ROOT}/build_s/bin/tfm_s.bin"
+NS_UNSIGN="${TFM_ROOT}/build_ns/bin/tfm_ns.bin"
 UPDATE="${TFM_ROOT}/build_s/api_ns/TFM_UPDATE.sh"
 REG_SRC="${TFM_ROOT}/build_s/api_ns/regression.sh"
 
@@ -56,11 +58,17 @@ DATE="$(date +%Y%m%d)"
 OUT_NAME="tfm-h573-flash-${KIND}-${DATE}"
 OUT_DIR="${TFM_ROOT}/${OUT_NAME}"
 rm -rf "${OUT_DIR}"
-mkdir -p "${OUT_DIR}/images"
+mkdir -p "${OUT_DIR}/images" "${OUT_DIR}/unsigned"
 
 cp -a "${BL2}" "${OUT_DIR}/images/bl2.bin"
 cp -a "${SBIN}" "${OUT_DIR}/images/tfm_s_signed.bin"
 cp -a "${NSBIN}" "${OUT_DIR}/images/tfm_ns_signed.bin"
+if [[ -f "${S_UNSIGN}" ]]; then
+    cp -a "${S_UNSIGN}" "${OUT_DIR}/unsigned/tfm_s.bin"
+fi
+if [[ -f "${NS_UNSIGN}" ]]; then
+    cp -a "${NS_UNSIGN}" "${OUT_DIR}/unsigned/tfm_ns.bin"
+fi
 
 # 带上独立签名工具：替换未签名 bin 后可在本机重签
 SIGN_SRC="${TFM_ROOT}/sign_kit"
@@ -281,12 +289,14 @@ echo "签名完成，可以 ./download.sh"
 EOF
 
 cat > "${OUT_DIR}/unsigned/README.txt" <<'EOF'
-把编译出来的未签名 bin 放在这里，然后在上一级执行 ./sign.sh
+这里是未签名固件。包里已带当前编译出的 tfm_s.bin / tfm_ns.bin。
 
-  tfm_ns.bin / *ns*.bin     →  签成 images/tfm_ns_signed.bin
-  tfm_s.bin  / *sapp* / *_s.bin  →  签成 images/tfm_s_signed.bin
+替换成你自己编的 bin 后，在上一级执行 ./sign.sh，会签好并覆盖 images/。
 
-BL2（images/bl2.bin）不用签，不要放在这里替换。
+  tfm_ns.bin / *ns*.bin          →  images/tfm_ns_signed.bin
+  tfm_s.bin  / *sapp* / *_s.bin  →  images/tfm_s_signed.bin
+
+BL2（images/bl2.bin）不用签。
 EOF
 
 cat > "${OUT_DIR}/flash_all.sh" <<'EOF'
@@ -327,9 +337,8 @@ STM32H573I-DK  本地 Ubuntu 烧录包（${KIND}）
 ----------------------------
 本机还需要 python3（Ubuntu: sudo apt install -y python3 python3-pip python3-venv）
 
-  1) 把未签名 bin 拷进 unsigned/
-       unsigned/tfm_ns.bin     # 非安全
-       unsigned/tfm_s.bin      # 安全（可选）
+  1) 包里 unsigned/ 已有本次编译的未签名 tfm_s.bin、tfm_ns.bin
+     换成你自己的 bin 后执行:
   2) ./sign.sh                 # 自动签名并覆盖 images/ 里对应 signed
   3) ./download.sh             # 只烧镜像，不必再跑 regression
 
