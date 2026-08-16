@@ -62,6 +62,22 @@ cp -a "${BL2}" "${OUT_DIR}/images/bl2.bin"
 cp -a "${SBIN}" "${OUT_DIR}/images/tfm_s_signed.bin"
 cp -a "${NSBIN}" "${OUT_DIR}/images/tfm_ns_signed.bin"
 
+# 带上独立签名工具：替换未签名 bin 后可在本机重签
+SIGN_SRC="${TFM_ROOT}/sign_kit"
+if [[ ! -d "${SIGN_SRC}" && -d "${SCRIPT_DIR}/sign_kit" ]]; then
+    SIGN_SRC="${SCRIPT_DIR}/sign_kit"
+fi
+if [[ -d "${SIGN_SRC}" ]]; then
+    mkdir -p "${OUT_DIR}/sign/keys" "${OUT_DIR}/sign/layout" "${OUT_DIR}/sign/scripts" "${OUT_DIR}/sign/bl2" "${OUT_DIR}/unsigned"
+    cp -a "${SIGN_SRC}/sign.sh" "${SIGN_SRC}/config" "${SIGN_SRC}/requirements.txt" "${OUT_DIR}/sign/"
+    cp -a "${SIGN_SRC}/keys/." "${OUT_DIR}/sign/keys/"
+    cp -a "${SIGN_SRC}/layout/." "${OUT_DIR}/sign/layout/"
+    cp -a "${SIGN_SRC}/scripts/." "${OUT_DIR}/sign/scripts/"
+    cp -a "${SIGN_SRC}/bl2/." "${OUT_DIR}/sign/bl2/"
+    chmod +x "${OUT_DIR}/sign/sign.sh"
+    find "${OUT_DIR}/sign" -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
+fi
+
 cat > "${OUT_DIR}/images/layout.txt" <<EOF
 STM32H573I-DK  烧录地址（安全别名 0x0C......）
 BL2             ${BOOT_ADDR}   images/bl2.bin
@@ -143,6 +159,136 @@ EOF
     echo 'echo "download Done"'
 } > "${OUT_DIR}/download.sh"
 
+cat > "${OUT_DIR}/sign.sh" <<'EOF'
+#!/usr/bin/env bash
+# 把未签名 bin 签成 MCUboot 镜像，并放到 images/ 供 download.sh 使用
+#
+#   ./sign.sh                         # 签 unsigned/ 里能认出来的文件
+#   ./sign.sh unsigned/tfm_ns.bin
+#   ./sign.sh ns  /path/to/app.bin
+#   ./sign.sh s   /path/to/sapp.bin
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SIGN_KIT="${SCRIPT_DIR}/sign"
+[[ -x "${SIGN_KIT}/sign.sh" ]] || { echo "错误: 本包没有签名工具（缺少 sign/）"; exit 1; }
+
+ensure_deps() {
+    local py=""
+    if [[ -x "${SIGN_KIT}/.venv/bin/python" ]]; then
+        py="${SIGN_KIT}/.venv/bin/python"
+    elif command -v python3 >/dev/null 2>&1; then
+        py="python3"
+    else
+        echo "错误: 需要 python3。Ubuntu: sudo apt install -y python3 python3-pip python3-venv"
+        exit 1
+    fi
+    if ! "${py}" -c "import click, cryptography, cbor2, intelhex" 2>/dev/null; then
+        echo ">>> 安装签名依赖（python3 -m pip）"
+        if [[ ! -x "${SIGN_KIT}/.venv/bin/python" ]]; then
+            python3 -m venv "${SIGN_KIT}/.venv" || {
+                echo "错误: 创建 venv 失败。请执行: sudo apt install -y python3-venv python3-pip"
+                exit 1
+            }
+        fi
+        py="${SIGN_KIT}/.venv/bin/python"
+        "${py}" -m pip install -q --upgrade pip
+        "${py}" -m pip install -q -r "${SIGN_KIT}/requirements.txt"
+    fi
+}
+
+install_signed() {
+    local kind="$1" signed="$2"
+    mkdir -p "${SCRIPT_DIR}/images"
+    if [[ "${kind}" == "ns" ]]; then
+        cp -a "${signed}" "${SCRIPT_DIR}/images/tfm_ns_signed.bin"
+        echo "已更新 images/tfm_ns_signed.bin  （烧录地址 0x0C088000）"
+    else
+        cp -a "${signed}" "${SCRIPT_DIR}/images/tfm_s_signed.bin"
+        echo "已更新 images/tfm_s_signed.bin   （烧录地址 0x0C038000）"
+    fi
+}
+
+guess_kind() {
+    local base_lc
+    base_lc="$(printf '%s' "$(basename "$1")" | tr '[:upper:]' '[:lower:]')"
+    if [[ "${base_lc}" == *ns* ]]; then
+        echo ns
+    elif [[ "${base_lc}" == *sapp* || "${base_lc}" == *tfm_s* || "${base_lc}" == *_s.bin ]]; then
+        echo s
+    else
+        echo ""
+    fi
+}
+
+sign_one() {
+    local kind="$1" infile="$2"
+    [[ -f "${infile}" ]] || { echo "错误: 找不到 ${infile}"; exit 1; }
+    infile="$(cd "$(dirname "${infile}")" && pwd)/$(basename "${infile}")"
+    echo ">>> 签名 ${kind}: ${infile}"
+    (cd "${SIGN_KIT}" && ./sign.sh "${kind}" "${infile}")
+    local stem signed
+    stem="$(basename "${infile}")"
+    stem="${stem%.*}"
+    signed="${SIGN_KIT}/${stem}_signed.bin"
+    [[ -f "${signed}" ]] || { echo "错误: 签名没有产出 ${signed}"; exit 1; }
+    install_signed "${kind}" "${signed}"
+}
+
+ensure_deps
+
+if [[ $# -eq 0 ]]; then
+    found=0
+    shopt -s nullglob
+    for f in "${SCRIPT_DIR}/unsigned/"*.bin; do
+        [[ "$(basename "$f")" == *_signed.bin ]] && continue
+        k="$(guess_kind "$f")"
+        if [[ -z "${k}" ]]; then
+            echo "跳过（看不出 S/NS）: $f   请用 ./sign.sh ns $f  或  ./sign.sh s $f"
+            continue
+        fi
+        sign_one "${k}" "$f"
+        found=1
+    done
+    if [[ "${found}" -eq 0 ]]; then
+        echo "用法:"
+        echo "  1) 把未签名 bin 放到 unsigned/（文件名带 ns 或 tfm_s / _s.bin）"
+        echo "     ./sign.sh"
+        echo "  2) ./sign.sh unsigned/tfm_ns.bin"
+        echo "  3) ./sign.sh ns  /path/app.bin"
+        echo "  4) ./sign.sh s   /path/sapp.bin"
+        echo "签完后执行 ./download.sh 烧录。"
+        exit 2
+    fi
+    echo "签名完成，可以 ./download.sh"
+    exit 0
+fi
+
+if [[ "$1" == "ns" || "$1" == "NS" || "$1" == "s" || "$1" == "S" ]]; then
+    [[ $# -ge 2 ]] || { echo "错误: 请给出 bin 路径"; exit 2; }
+    k="$1"
+    [[ "${k}" == "NS" ]] && k="ns"
+    [[ "${k}" == "S" ]] && k="s"
+    sign_one "${k}" "$2"
+    echo "签名完成，可以 ./download.sh"
+    exit 0
+fi
+
+infile="$1"
+k="$(guess_kind "${infile}")"
+[[ -n "${k}" ]] || { echo "无法从文件名判断类型，请用: ./sign.sh ns $1  或  ./sign.sh s $1"; exit 2; }
+sign_one "${k}" "${infile}"
+echo "签名完成，可以 ./download.sh"
+EOF
+
+cat > "${OUT_DIR}/unsigned/README.txt" <<'EOF'
+把编译出来的未签名 bin 放在这里，然后在上一级执行 ./sign.sh
+
+  tfm_ns.bin / *ns*.bin     →  签成 images/tfm_ns_signed.bin
+  tfm_s.bin  / *sapp* / *_s.bin  →  签成 images/tfm_s_signed.bin
+
+BL2（images/bl2.bin）不用签，不要放在这里替换。
+EOF
+
 cat > "${OUT_DIR}/flash_all.sh" <<'EOF'
 #!/usr/bin/env bash
 # 先回归（option bytes + 全片擦除），再下载三份镜像
@@ -177,6 +323,23 @@ STM32H573I-DK  本地 Ubuntu 烧录包（${KIND}）
   ./download.sh       # 烧 BL2 + 安全 + NS，并设 BOOT_UBE=0xB4
   ./flash_all.sh      # 上面两步一起做
 
+替换自己编的未签名程序并重签
+----------------------------
+本机还需要 python3（Ubuntu: sudo apt install -y python3 python3-pip python3-venv）
+
+  1) 把未签名 bin 拷进 unsigned/
+       unsigned/tfm_ns.bin     # 非安全
+       unsigned/tfm_s.bin      # 安全（可选）
+  2) ./sign.sh                 # 自动签名并覆盖 images/ 里对应 signed
+  3) ./download.sh             # 只烧镜像，不必再跑 regression
+
+也可以指定文件:
+  ./sign.sh unsigned/tfm_ns.bin
+  ./sign.sh ns  /path/to/app.bin
+  ./sign.sh s   /path/to/sapp.bin
+
+BL2 不要用这套签；只换 S/NS。密钥是和当前板上 BL2 配套的 dummy RSA-3072。
+
 多块板子时加序列号:
   ./download.sh 002A001234
 
@@ -192,7 +355,7 @@ $(cat "${OUT_DIR}/images/layout.txt")
 - 烧完复位，NS 会跑回归测试（正式版也是可跑的 NS 测试程序）
 EOF
 
-chmod +x "${OUT_DIR}/regression.sh" "${OUT_DIR}/download.sh" "${OUT_DIR}/flash_all.sh"
+chmod +x "${OUT_DIR}/regression.sh" "${OUT_DIR}/download.sh" "${OUT_DIR}/flash_all.sh" "${OUT_DIR}/sign.sh"
 
 TAR="${TFM_ROOT}/${OUT_NAME}.tar.gz"
 tar -C "${TFM_ROOT}" -czf "${TAR}" "${OUT_NAME}"
