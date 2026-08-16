@@ -3,8 +3,8 @@
 #
 # 用法:
 #   ./buildtfm.sh              # 交互选择 测试版 / 正式版
-#   ./buildtfm.sh test         # 测试版：TEST_S/NS 回归
-#   ./buildtfm.sh prod         # 正式版：无测试分区，仍编 SPE + NS
+#   ./buildtfm.sh test         # 测试版：TEST_S/NS 回归，INFO 日志
+#   ./buildtfm.sh prod         # 正式版：同样编可烧可跑的 NS 测试程序，ERROR 日志
 #   ./buildtfm.sh -h
 #
 # SPDX-License-Identifier: BSD-3-Clause
@@ -17,8 +17,8 @@ STM32H573I-DK TF-M 编译脚本（已启用硬件浮点 FPv5-SP-D16）
 
 用法:
   ./buildtfm.sh              交互选择构建类型
-  ./buildtfm.sh test         测试版（安全/非安全回归测试）
-  ./buildtfm.sh prod         正式版（关闭 TEST_S/TEST_NS，仍编 NS 镜像）
+  ./buildtfm.sh test         测试版（TEST_S/NS 回归，INFO 日志）
+  ./buildtfm.sh prod         正式版（同样出可烧可跑的 NS 测试程序，ERROR 日志）
 
 别名: test|debug|回归    prod|release|formal|正式
 EOF
@@ -39,8 +39,8 @@ esac
 
 if [[ -z "${BUILD_TYPE}" ]]; then
     echo "请选择构建类型:"
-    echo "  1) 测试版  — 打开 TEST_S / TEST_NS，编回归 NS"
-    echo "  2) 正式版  — 关闭测试代码，编 BL2 + SPE + NS（无回归套件）"
+    echo "  1) 测试版  — TEST_S / TEST_NS 全开，INFO 日志，NS 测试可烧可跑"
+    echo "  2) 正式版  — 同样编 NS 测试程序（可烧可跑），日志收到 ERROR"
     echo -n "输入 1 或 2: "
     read -r choice
     case "${choice}" in
@@ -89,7 +89,8 @@ if [[ "${BUILD_TYPE}" == "test" ]]; then
     )
 else
     BUILD_LABEL="正式版"
-    TEST_FLAGS=(-DTEST_S=OFF -DTEST_NS=OFF)
+    # 正式版也要出能下载、能跑的 NS 测试程序，只把日志收到 ERROR
+    TEST_FLAGS=(-DTEST_S=ON -DTEST_NS=ON)
     LOG_FLAGS=(
         -DTFM_BL2_LOG_LEVEL=LOG_LEVEL_ERROR
         -DTFM_SPM_LOG_LEVEL=LOG_LEVEL_ERROR
@@ -178,11 +179,7 @@ SPE_CONFIG="${TFM_ROOT}/build_s/api_ns/cmake/spe_config.cmake"
 [[ -f "${SPE_CONFIG}" ]] && \
     sed -i 's/^set(CHECK_TFM_TESTS_VERSION.*$/set(CHECK_TFM_TESTS_VERSION OFF)/' "${SPE_CONFIG}"
 
-if [[ "${BUILD_TYPE}" == "test" ]]; then
-    echo ">>> build_ns (回归测试)"
-else
-    echo ">>> build_ns (正式版，无 TEST_NS 套件)"
-fi
+echo ">>> build_ns (回归测试程序，可烧录可跑)"
 rm -rf build_ns
 mkdir -p "${LIB_EXT_NS}"
 for lib in qcbor t_cose; do
@@ -208,7 +205,5 @@ echo "=== 编译完成（${BUILD_LABEL}，硬件浮点 ON）==="
 echo "烧录: cd ${TFM_ROOT}/build_s/api_ns && ./regression.sh"
 echo "      STM32_Programmer_CLI -c port=SWD mode=HotPlug -ob BOOT_UBE=0xB4"
 echo "      ./TFM_UPDATE.sh"
-echo "NS 镜像: ${TFM_ROOT}/build_ns/bin/tfm_ns_signed.bin  地址 0x0C088000"
-if [[ "${BUILD_TYPE}" == "prod" ]]; then
-    echo "正式版 NS 不含回归测试，可直接烧录或替换为产品 NS。"
-fi
+echo "NS 测试程序: ${TFM_ROOT}/build_ns/bin/tfm_ns_signed.bin  地址 0x0C088000"
+echo "烧录后会上电自动跑回归测试（串口 115200 看 PASSED/FAILED）。"
