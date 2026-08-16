@@ -99,9 +99,13 @@ else
 fi
 
 # Cortex-M33 单精度硬件 FPU；BL2 仍为 soft（TF-M 默认）
+# NS cmake 只吃命令行/ spe_config，STM cpuarch 不设 FP，必须把配套开关一起传
 FP_FLAGS=(
     -DCONFIG_TFM_ENABLE_FP=ON
     -DCONFIG_TFM_FP_ARCH=fpv5-sp-d16
+    -DCONFIG_TFM_ENABLE_CP10CP11=ON
+    -DCONFIG_TFM_FLOAT_ABI=hard
+    -DCONFIG_TFM_LAZY_STACKING=ON
 )
 
 echo ">>> WORK_ROOT: ${WORK_ROOT}"
