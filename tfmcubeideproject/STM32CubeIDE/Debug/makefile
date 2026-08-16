@@ -9,10 +9,23 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
--include Drivers/STM32H5xx_HAL_Driver/subdir.mk
--include Drivers/CMSIS/subdir.mk
--include Application/User/Startup/subdir.mk
--include Application/User/Core/subdir.mk
+-include ns_app/tfm_src/subdir.mk
+-include ns_app/spe/out/obj/subdir.mk
+-include ns_app/spe/api_ns/platform/hal/Src/subdir.mk
+-include ns_app/spe/api_ns/platform/hal/CMSIS_Driver/subdir.mk
+-include ns_app/spe/api_ns/platform/ext/common/template/subdir.mk
+-include ns_app/spe/api_ns/platform/ext/common/scmi/protocols/subdir.mk
+-include ns_app/spe/api_ns/platform/ext/common/scmi/subdir.mk
+-include ns_app/spe/api_ns/platform/ext/common/provisioning_bundle/subdir.mk
+-include ns_app/spe/api_ns/platform/ext/common/subdir.mk
+-include ns_app/spe/api_ns/platform/Device/Source/subdir.mk
+-include ns_app/spe/api_ns/interface/src/os_wrapper/subdir.mk
+-include ns_app/spe/api_ns/interface/src/subdir.mk
+-include ns_app/spe/api_ns/interface/lib/subdir.mk
+-include ns_app/spe/api_ns/image_signing/layout_files/subdir.mk
+-include ns_app/spe/api_ns/bin/subdir.mk
+-include ns_app/spe/api_ns/subdir.mk
+-include ns_app/subdir.mk
 -include objects.mk
 
 ifneq ($(MAKECMDGOALS),clean)
@@ -53,6 +66,9 @@ default.size.stdout \
 OBJDUMP_LIST += \
 tfmminiproject.list \
 
+OBJCOPY_BIN += \
+tfmminiproject.bin \
+
 
 # All Target
 all: main-build
@@ -61,8 +77,8 @@ all: main-build
 main-build: tfmminiproject.elf secondary-outputs
 
 # Tool invocations
-tfmminiproject.elf tfmminiproject.map: $(OBJS) $(USER_OBJS) C:\Users\13584\Desktop\tfm\tfmminiproject\STM32CubeIDE\STM32H573VITX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "tfmminiproject.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m33 -T"C:\Users\13584\Desktop\tfm\tfmminiproject\STM32CubeIDE\STM32H573VITX_FLASH.ld" --specs=nosys.specs -Wl,-Map="tfmminiproject.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+tfmminiproject.elf tfmminiproject.map: $(OBJS) $(USER_OBJS) ../ns_app/out/appli_ns.pp.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "tfmminiproject.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m33 -T"../ns_app/out/appli_ns.pp.ld" --specs=nosys.specs -Wl,-Map="tfmminiproject.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -76,12 +92,17 @@ tfmminiproject.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	@echo 'Finished building: $@'
 	@echo ' '
 
+tfmminiproject.bin: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objcopy  -O binary $(EXECUTABLES) "tfmminiproject.bin"
+	@echo 'Finished building: $@'
+	@echo ' '
+
 # Other Targets
 clean:
-	-$(RM) default.size.stdout tfmminiproject.elf tfmminiproject.list tfmminiproject.map
+	-$(RM) default.size.stdout tfmminiproject.bin tfmminiproject.elf tfmminiproject.list tfmminiproject.map
 	-@echo ' '
 
-secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)
+secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST) $(OBJCOPY_BIN)
 
 fail-specified-linker-script-missing:
 	@echo 'Error: Cannot find the specified linker script. Check the linker settings in the build configuration.'
