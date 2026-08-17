@@ -11,14 +11,13 @@
 #define MBEDTLS_PSA_CRYPTO_CLIENT
 #undef  MBEDTLS_PSA_CRYPTO_C
 
-/* ssl.h sizes ECDHE premaster from this; SPE client config does not set it. */
-/* ssl.h needs a premaster buffer size; do not enable ECP_LIGHT (needs DP_*). */
-#ifndef MBEDTLS_ECP_MAX_BITS
-#define MBEDTLS_ECP_MAX_BITS  521
-#endif
-#ifndef MBEDTLS_ECP_MAX_BYTES
-#define MBEDTLS_ECP_MAX_BYTES ((MBEDTLS_ECP_MAX_BITS + 7) / 8)
-#endif
+/*
+ * Do not define MBEDTLS_ECP_LIGHT here: it requires MBEDTLS_ECP_DP_* and
+ * pulls software ECP. ecp.h then sets MBEDTLS_ECP_MAX_BITS to a dummy 1,
+ * which is enough for ssl_setup smoke. A real ECDHE handshake needs a
+ * larger premaster (enable a curve / PSA ECDHE, still without compiling
+ * builtin ecp.c / aes.c).
+ */
 
 #define MBEDTLS_CIPHER_C
 #define MBEDTLS_MD_C
