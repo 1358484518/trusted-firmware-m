@@ -28,5 +28,8 @@ venv
 
 trusted_firmware_m.egg-info/
 
+# CubeIDE NS local build output
+tfmcubeideproject/STM32CubeIDE/ns_app/out/
+
 # clangd
 .cache/

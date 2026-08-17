@@ -32,6 +32,10 @@
 #include "psa/internal_trusted_storage.h"
 #include "psa/update.h"
 
+#include "mbedtls/ssl.h"
+#include "mbedtls/x509_crt.h"
+#include "mbedtls/version.h"
+
 static int g_fail;
 
 /* tfm_log_printf has no %02x; print two lowercase hex digits per byte. */
@@ -121,6 +125,40 @@ static void test_its(void)
     check("psa_its_remove", status);
 }
 
+static void test_tls_config(void)
+{
+    mbedtls_ssl_config conf;
+    mbedtls_ssl_context ssl;
+    int ret;
+
+    LOG_MSG("Mbed TLS %s (PSA client)\r\n", MBEDTLS_VERSION_STRING);
+
+    mbedtls_ssl_config_init(&conf);
+    mbedtls_ssl_init(&ssl);
+
+    ret = mbedtls_ssl_config_defaults(&conf,
+                                      MBEDTLS_SSL_IS_CLIENT,
+                                      MBEDTLS_SSL_TRANSPORT_STREAM,
+                                      MBEDTLS_SSL_PRESET_DEFAULT);
+    check("mbedtls_ssl_config_defaults",
+          (ret == 0) ? PSA_SUCCESS : PSA_ERROR_GENERIC_ERROR);
+    if (ret != 0) {
+        mbedtls_ssl_free(&ssl);
+        mbedtls_ssl_config_free(&conf);
+        return;
+    }
+
+    mbedtls_ssl_conf_min_tls_version(&conf, MBEDTLS_SSL_VERSION_TLS1_2);
+    mbedtls_ssl_conf_max_tls_version(&conf, MBEDTLS_SSL_VERSION_TLS1_3);
+
+    ret = mbedtls_ssl_setup(&ssl, &conf);
+    check("mbedtls_ssl_setup TLS1.2-1.3",
+          (ret == 0) ? PSA_SUCCESS : PSA_ERROR_GENERIC_ERROR);
+
+    mbedtls_ssl_free(&ssl);
+    mbedtls_ssl_config_free(&conf);
+}
+
 static void test_fwu_query(void)
 {
     psa_fwu_component_info_t info;
@@ -168,6 +206,7 @@ int main(void)
     LOG_MSG("tfm_ns_interface_init ok\r\n");
 
     test_crypto();
+    test_tls_config();
     test_its();
     test_fwu_query();
 
