@@ -1,0 +1,5 @@
+imgtool>=2.1.0
+click>=8.1
+cryptography>=42.0
+cbor2>=5.6
+intelhex>=2.2
