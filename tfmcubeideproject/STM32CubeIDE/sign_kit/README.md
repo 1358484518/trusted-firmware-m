@@ -14,6 +14,8 @@ cd sign_kit
 
 Windows（命令提示符或 PowerShell）：
 
+CubeIDE 的 post-build 会调用本目录 `sign.bat`。若日志出现 `1KIT:~0,-1"`、`'"=="nspe"` 或 `'et' 不是内部或外部命令`，是旧版脚本在 LF 换行下被 `\"` 拆行了；请更新本文件后再编。
+
 ```bat
 cd sign_kit
 sign.bat tfm_ns.bin

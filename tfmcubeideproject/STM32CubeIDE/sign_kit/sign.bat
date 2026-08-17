@@ -1,15 +1,19 @@
-echo === Starting signing process ===
 @echo off
+echo === Starting signing process ===
 rem Standalone MCUboot signer for TF-M Secure / Non-Secure binaries (STM32H573I-DK).
 rem Drop the unsigned .bin into this folder and run:
 rem   sign.bat tfm_ns.bin
 rem   sign.bat sapp.bin
 rem SPDX-License-Identifier: BSD-3-Clause
+rem Do not test the last character against a quoted backslash: cmd.exe
+rem treats backslash-quote as an escaped quote and, with LF line endings
+rem from a GitHub zip, swallows the rest of this script.
 
 setlocal EnableExtensions EnableDelayedExpansion
 
+rem %~dp0 always ends with a backslash; strip it unconditionally.
 set "KIT=%~dp0"
-if "%KIT:~-1%"=="\" set "KIT=%KIT:~0,-1%"
+set "KIT=%KIT:~0,-1%"
 
 call :load_config
 if errorlevel 1 exit /b 1
