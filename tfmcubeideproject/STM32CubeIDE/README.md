@@ -43,7 +43,7 @@ make -j$(nproc)
 
 1. 导入本目录工程 `tfmminiproject`
 2. Debug / Release 已加 Mbed TLS 头路径、三个宏、以及 mbedtls 源码排除
-3. 构建后走原来的 `sign_kit/sign.bat` post-build
+3. 构建后走原来的 `sign_kit/sign.bat` post-build。若 Windows 上签名一步报 `1KIT:~0,-1"` / `'et' 不是内部或外部命令`，更新 `sign_kit/sign.bat` 后再编（GitHub zip 是 LF 换行，旧写法会被 `cmd` 拆行）。
 4. 若 CubeIDE 仍去编译 `mbedtls-4.1.1` 下不该编的 `.c`，对照 `.cproject` 的 `sourceEntries` 排除项，或改用上面的 Makefile
 
 浮点 ABI 必须与 SPE 一致：`fpv5-sp-d16` + hard float（`CONFIG_TFM_FLOAT_ABI=2`）。
