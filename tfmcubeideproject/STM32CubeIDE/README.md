@@ -18,7 +18,7 @@ NS 侧跑 TLS 1.2 / TLS 1.3 握手状态机和 X.509 解析。AES / SHA / 随机
 
 - `ns_crypto_user.h`（`TF_PSA_CRYPTO_USER_CONFIG_FILE`）：打开 `MBEDTLS_PSA_CRYPTO_CLIENT` 和 PK/ASN.1/PEM，**不要**定义 `MBEDTLS_ECP_LIGHT`
 - `ns_mbedtls_user.h`（`MBEDTLS_USER_CONFIG_FILE`）
-- 编译宏：`MBEDTLS_ALLOW_PRIVATE_ACCESS`
+- `MBEDTLS_USER_CONFIG_FILE="ns_mbedtls_user.h"` 里会定义 `MBEDTLS_ALLOW_PRIVATE_ACCESS`（编 TLS 库内部字段用）。**不要**再在 CubeIDE 的 `-D` 里加一遍，否则 `tf_psa_crypto_common.h` 会报 redefined
 
 头文件顺序必须是 **Mbed TLS 4.1.1 在前，`api_ns` 在后**，否则会用到 SPE 旧的 `mbedtls/pk.h`。
 
