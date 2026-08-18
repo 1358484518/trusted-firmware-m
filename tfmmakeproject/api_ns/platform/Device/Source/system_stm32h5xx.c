@@ -49,6 +49,8 @@
   */
 
 #include "stm32h5xx.h"
+#include "stm32h5xx_hal_conf.h"
+#include "stm32h5xx_hal.h"
 
 /**
   * @}
@@ -267,6 +269,19 @@ void SystemCoreClockUpdate(void)
   */
 static void SetSysClock(void)
 {
+#if (HSE_VALUE == 8000000U)
+  const uint32_t pll_m = 2U;
+  const uint32_t pll_n = 125U;
+#elif (HSE_VALUE == 25000000U)
+  const uint32_t pll_m = 5U;
+  const uint32_t pll_n = 100U;
+#else
+#error "Unsupported HSE_VALUE: add PLL factors in system_stm32h5xx.c for your crystal"
+#endif
+  const uint32_t pll_p = 2U;
+  const uint32_t pll_q = 2U;
+  const uint32_t pll_r = 2U;
+
   /* Set the regulator supply output voltage */
   MODIFY_REG(PWR->SCCR, (PWR_SCCR_BYPASS), PWR_SCCR_LDOEN);
   MODIFY_REG(PWR->VOSCR, PWR_VOSCR_VOS, PWR_VOSCR_VOS);
@@ -274,33 +289,31 @@ static void SetSysClock(void)
   {
   }
 
-  /* HSI Calibration with default value */
-  MODIFY_REG(RCC->HSICFGR, RCC_HSICFGR_HSITRIM, 0x40 << RCC_HSICFGR_HSITRIM_Pos);
-  MODIFY_REG(RCC->CR, RCC_CR_HSIDIV, RCC_HSI_DIV1);
-  /* Enable HSI oscillator */
-  SET_BIT(RCC->CR, RCC_CR_HSION);
-  while((RCC->CR & RCC_CR_HSIRDY) != RCC_CR_HSIRDY)
+  /* Enable HSE (external crystal) */
+  CLEAR_BIT(RCC->CR, RCC_CR_HSEBYP | RCC_CR_HSEEXT);
+  SET_BIT(RCC->CR, RCC_CR_HSEON);
+  while (READ_BIT(RCC->CR, RCC_CR_HSERDY) == 0U)
   {
   }
 
-  /* Set FLASH latency */
+  /* Set FLASH latency for 250 MHz SYSCLK */
   MODIFY_REG(FLASH->ACR, FLASH_ACR_LATENCY, FLASH_ACR_LATENCY_5WS);
 
-  /* Configure PLL clock source */
-  MODIFY_REG(RCC->PLL1CFGR, RCC_PLL1CFGR_PLL1SRC, RCC_PLL1CFGR_PLL1SRC_0);
+  /* Configure PLL1: HSE -> 250 MHz (HSE / M * N / P) */
+  MODIFY_REG(RCC->PLL1CFGR, RCC_PLL1CFGR_PLL1SRC,
+             (RCC_PLL1CFGR_PLL1SRC_0 | RCC_PLL1CFGR_PLL1SRC_1));
 
-  /* Main PLL configuration and activation */
   SET_BIT(RCC->PLL1CFGR, RCC_PLL1CFGR_PLL1PEN);
   SET_BIT(RCC->PLL1CFGR, RCC_PLL1CFGR_PLL1QEN);
   SET_BIT(RCC->PLL1CFGR, RCC_PLL1CFGR_PLL1REN);
   CLEAR_BIT(RCC->PLL1CFGR, RCC_PLL1CFGR_PLL1FRACEN);
-  MODIFY_REG(RCC->PLL1CFGR, RCC_PLL1CFGR_PLL1RGE, RCC_PLL1CFGR_PLL1SRC_1 << RCC_PLL1CFGR_PLL1RGE_Pos);
+  MODIFY_REG(RCC->PLL1CFGR, RCC_PLL1CFGR_PLL1RGE, RCC_PLL1_VCIRANGE_2);
   MODIFY_REG(RCC->PLL1CFGR, RCC_PLL1CFGR_PLL1VCOSEL, RCC_PLL1VCOWIDE << RCC_PLL1CFGR_PLL1VCOSEL_Pos);
-  MODIFY_REG(RCC->PLL1CFGR, RCC_PLL1CFGR_PLL1M, RCC_PLL1CFGR_PLL1M_Pos  << RCC_PLL1CFGR_PLL1M_Pos);
-  MODIFY_REG(RCC->PLL1DIVR, RCC_PLL1DIVR_PLL1N, (60U - 1UL) << RCC_PLL1DIVR_PLL1N_Pos);
-  MODIFY_REG(RCC->PLL1DIVR, RCC_PLL1DIVR_PLL1P, (2U - 1UL) << RCC_PLL1DIVR_PLL1P_Pos);
-  MODIFY_REG(RCC->PLL1DIVR, RCC_PLL1DIVR_PLL1Q, (2U - 1UL) << RCC_PLL1DIVR_PLL1Q_Pos);
-  MODIFY_REG(RCC->PLL1DIVR, RCC_PLL1DIVR_PLL1R, (2U - 1UL) << RCC_PLL1DIVR_PLL1R_Pos);
+  MODIFY_REG(RCC->PLL1CFGR, RCC_PLL1CFGR_PLL1M, pll_m << RCC_PLL1CFGR_PLL1M_Pos);
+  MODIFY_REG(RCC->PLL1DIVR, RCC_PLL1DIVR_PLL1N, (pll_n - 1UL) << RCC_PLL1DIVR_PLL1N_Pos);
+  MODIFY_REG(RCC->PLL1DIVR, RCC_PLL1DIVR_PLL1P, (pll_p - 1UL) << RCC_PLL1DIVR_PLL1P_Pos);
+  MODIFY_REG(RCC->PLL1DIVR, RCC_PLL1DIVR_PLL1Q, (pll_q - 1UL) << RCC_PLL1DIVR_PLL1Q_Pos);
+  MODIFY_REG(RCC->PLL1DIVR, RCC_PLL1DIVR_PLL1R, (pll_r - 1UL) << RCC_PLL1DIVR_PLL1R_Pos);
 
   SET_BIT(RCC->CR, RCC_CR_PLL1ON);
   while((RCC->CR & RCC_CR_PLL1RDY) != RCC_CR_PLL1RDY)
@@ -322,6 +335,8 @@ static void SetSysClock(void)
 
   /* Enable the HSI48 oscillator (HSI48) for RNG peripheral */
   RCC->CR |= RCC_CR_HSI48ON;
+
+  SystemCoreClockUpdate();
 }
 
 /**
