@@ -37,6 +37,12 @@ int stdio_output_string(const char *str, uint32_t len)
 {
     int32_t ret;
 
+#if defined(PLATFORM_DISABLE_UART_STDIO) && (PLATFORM_DISABLE_UART_STDIO == 1)
+    (void)str;
+    (void)len;
+    (void)ret;
+    return 0;
+#else
     if (!is_initialized) {
         return 0;
     }
@@ -55,6 +61,7 @@ int stdio_output_string(const char *str, uint32_t len)
     while (STDIO_DRIVER.GetStatus().tx_busy);
 
     return STDIO_DRIVER.GetTxCount();
+#endif
 }
 
 void stdio_is_initialized_reset(void)
@@ -182,6 +189,9 @@ int putchar(int ch)
 
 void stdio_init(void)
 {
+#if defined(PLATFORM_DISABLE_UART_STDIO) && (PLATFORM_DISABLE_UART_STDIO == 1)
+    is_initialized = false;
+#else
     int32_t ret = ARM_DRIVER_ERROR;
 
     ret = STDIO_DRIVER.Initialize(NULL);
@@ -209,10 +219,14 @@ void stdio_init(void)
     }
 
     is_initialized = true;
+#endif
 }
 
 void stdio_uninit(void)
 {
+#if defined(PLATFORM_DISABLE_UART_STDIO) && (PLATFORM_DISABLE_UART_STDIO == 1)
+    is_initialized = false;
+#else
     int32_t ret = ARM_DRIVER_ERROR;
 
     ret = STDIO_DRIVER.PowerControl(ARM_POWER_OFF);
@@ -231,4 +245,5 @@ void stdio_uninit(void)
     }
 
     is_initialized = false;
+#endif
 }

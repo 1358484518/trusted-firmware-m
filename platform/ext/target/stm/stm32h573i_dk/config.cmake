@@ -24,8 +24,8 @@ set(CRYPTO_HW_ACCELERATOR                  ON          CACHE BOOL      "Whether 
 set(TF_PSA_CRYPTO_BUILD_TYPE               minsizerel  CACHE STRING    "Build type of TF-PSA-Crypto library")
 set(MCUBOOT_FIH_PROFILE                    LOW         CACHE STRING    "Fault injection hardening profile [OFF, LOW, MEDIUM, HIGH]")
 ################################## LOG LEVEL ###########################################
-set(TFM_SPM_LOG_LEVEL             LOG_LEVEL_INFO       CACHE STRING    "Set default SPM log level as INFO level")
-set(TFM_PARTITION_LOG_LEVEL       LOG_LEVEL_INFO       CACHE STRING    "Set default Secure Partition log level as INFO level")
+set(TFM_SPM_LOG_LEVEL             LOG_LEVEL_NONE       CACHE STRING    "Disable SPM log (no UART console)")
+set(TFM_PARTITION_LOG_LEVEL       LOG_LEVEL_NONE       CACHE STRING    "Disable Secure Partition log (no UART console)")
 set(MCUBOOT_HW_ROLLBACK_PROT            ON          CACHE BOOL      "Enable security counter validation against non-volatile HW counters")
 ################################## Platform-specific configurations ####################################
 set(CONFIG_TFM_USE_TRUSTZONE               ON           CACHE BOOL      "Use TrustZone")

@@ -31,4 +31,12 @@
 /* Default UART baud rate */
 #define DEFAULT_UART_BAUDRATE 115200
 
+/*
+ * Disable UART console (stdio_init / printf / BOOT_LOG over USART1).
+ * Useful when bringing up a custom board where the debug UART pins differ
+ * from STM32H573I-DK (PA9/PA10) and the UART path may hang or timeout.
+ * Set to 0 (or undefine) to re-enable console output.
+ */
+#define PLATFORM_DISABLE_UART_STDIO 1
+
 #endif  /* __DEVICE_CFG_H__ */

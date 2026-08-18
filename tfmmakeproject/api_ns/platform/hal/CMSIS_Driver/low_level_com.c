@@ -20,6 +20,7 @@
 
 #include "tfm_hal_device_header.h"
 #include "stm32hal.h"
+#include "device_cfg.h"
 /* board configuration  */
 #include "board.h"
 #ifndef ARG_UNUSED
@@ -74,7 +75,11 @@ static ARM_USART_CAPABILITIES USART_GetCapabilities(void)
 static UART_HandleTypeDef  uart_device;
 static int32_t USART0_Initialize(ARM_USART_SignalEvent_t cb_event)
 {
+  ARG_UNUSED(cb_event);
 
+#if defined(PLATFORM_DISABLE_UART_STDIO) && (PLATFORM_DISABLE_UART_STDIO == 1)
+  return ARM_DRIVER_OK;
+#else
 #if !defined(__DOMAIN_NS)
   GPIO_InitTypeDef GPIO_Init;
   /* Configure COM Tx as alternate function */
@@ -110,6 +115,7 @@ static int32_t USART0_Initialize(ARM_USART_SignalEvent_t cb_event)
     return ARM_DRIVER_ERROR;
   }
   return ARM_DRIVER_OK;
+#endif
 }
 
 static int32_t USART0_Uninitialize(void)
@@ -130,9 +136,13 @@ static int32_t USART0_Send(const void *data, uint32_t num)
     /* Invalid parameters */
     return ARM_DRIVER_ERROR_PARAMETER;
   }
+#if defined(PLATFORM_DISABLE_UART_STDIO) && (PLATFORM_DISABLE_UART_STDIO == 1)
+  return ARM_DRIVER_OK;
+#else
   HAL_UART_Transmit(&uart_device, (uint8_t *) data, num,  1000);
 
   return ARM_DRIVER_OK;
+#endif
 }
 
 static int32_t USART0_Receive(void *data, uint32_t num)

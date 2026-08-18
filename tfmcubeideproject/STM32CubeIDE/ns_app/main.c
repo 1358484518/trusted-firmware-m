@@ -12,7 +12,9 @@
  * All other C files come from TF-M or tf-m-tests (or the SPE api_ns export).
  *
  * Requires the matching flashed tfm_s.bin (s_veneers.o addresses must match).
- * USART1 / ST-Link VCP: 115200 8N1, JP1 not fitted.
+ * UART console is disabled by default (PLATFORM_DISABLE_UART_STDIO in device_cfg.h).
+ * To re-enable USART1 / ST-Link VCP (PA9/PA10, 115200 8N1, JP1 not fitted),
+ * set PLATFORM_DISABLE_UART_STDIO to 0 and rebuild.
  *
  * If SPE was built with TEST_S=ON, colored "PASSED" / "*** End of Secure
  * test suites ***" prints first. This app then prints NS-SMOKE.
