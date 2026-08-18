@@ -20,6 +20,7 @@ set(MCUBOOT_ENCRYPT_RSA                    OFF          CACHE BOOL     "Use RSA-
 ################################## Dependencies ########################################
 set(TFM_PARTITION_INTERNAL_TRUSTED_STORAGE ON          CACHE BOOL      "Enable Internal Trusted Storage partition")
 set(TFM_PARTITION_CRYPTO                   ON          CACHE BOOL      "Enable Crypto partition")
+set(PLATFORM_DEFAULT_CRYPTO_KEYS           OFF         CACHE BOOL      "HUK is derived from SAES DHUK, not the OTP dummy key")
 set(CRYPTO_HW_ACCELERATOR                  ON          CACHE BOOL      "Whether to enable the crypto hardware accelerator on supported platforms")
 set(TF_PSA_CRYPTO_BUILD_TYPE               minsizerel  CACHE STRING    "Build type of TF-PSA-Crypto library")
 set(MCUBOOT_FIH_PROFILE                    LOW         CACHE STRING    "Fault injection hardening profile [OFF, LOW, MEDIUM, HIGH]")

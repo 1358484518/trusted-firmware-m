@@ -93,6 +93,30 @@ target_compile_options(platform_s
         ${COMPILER_CMSE_FLAG}
 )
 
+# HUK is AES-encrypted with SAES DHUK instead of the dummy OTP blob
+if(TFM_PARTITION_CRYPTO)
+    target_sources(platform_crypto_keys
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/secure/huk_from_dhuk.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/secure/crypto_keys.c
+    )
+    target_include_directories(platform_crypto_keys
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/interface/include/crypto_keys
+            ${CMAKE_SOURCE_DIR}/platform/include
+            ${CMAKE_CURRENT_SOURCE_DIR}/secure
+            ${CMAKE_CURRENT_SOURCE_DIR}/hal/Inc
+            ${CMAKE_CURRENT_SOURCE_DIR}/Device/Include
+            ${CMAKE_CURRENT_SOURCE_DIR}
+            ${CMAKE_CURRENT_SOURCE_DIR}/boards
+            ${PLATFORM_DIR}/ext/target/${TFM_PLATFORM}/include
+    )
+    target_link_libraries(platform_crypto_keys
+        PRIVATE
+            cmsis
+    )
+endif()
+
 # GNU ld and IAR does not deal well with strong functions in static libraries
 # overriding weak functions in object files. For this reason, files with strong
 # functions are linked as an object file. This issue does not affect armclang,

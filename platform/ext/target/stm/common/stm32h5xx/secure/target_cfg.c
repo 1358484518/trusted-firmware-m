@@ -505,17 +505,7 @@ static void gtzc_internal_flash_priv(uint32_t offset_start, uint32_t offset_end)
 
 void gtzc_init_cfg(void)
 {
-#if (defined (MBEDTLS_SHA256_C) && defined (MBEDTLS_SHA256_ALT)) \
- || (defined (MBEDTLS_SHA1_C) && defined (MBEDTLS_SHA1_ALT)) \
- || (defined (MBEDTLS_MD5_C) && defined (MBEDTLS_MD5_ALT)) \
- || (defined (MBEDTLS_ECP_C) && defined (MBEDTLS_ECP_ALT)) \
- || (defined (MBEDTLS_ECDSA_C) && (defined (MBEDTLS_ECDSA_SIGN_ALT) || defined (MBEDTLS_ECDSA_VERIFY_ALT))) \
- || (defined (MBEDTLS_AES_C) && defined (MBEDTLS_AES_ALT)) \
- || (defined (MBEDTLS_GCM_C) && defined (MBEDTLS_GCM_ALT)) \
- || (defined (MBEDTLS_CCM_C) && defined (MBEDTLS_CCM_ALT)) \
- || defined (HW_CRYPTO_DPA_AES) || defined (HW_CRYPTO_DPA_GCM)
   uint32_t gtzc_periph_att;
-#endif
 
   if (uFlowStage == FLOW_STAGE_CFG)
   {
@@ -590,10 +580,9 @@ void gtzc_init_cfg(void)
     HAL_GTZC_TZSC_ConfigPeriphAttributes(GTZC_PERIPH_AES, GTZC_TZSC_PERIPH_SEC | GTZC_TZSC_PERIPH_PRIV);
     HAL_GTZC_TZIC_EnableIT(GTZC_PERIPH_AES);
 #endif
-#if defined (HW_CRYPTO_DPA_AES) || defined (HW_CRYPTO_DPA_GCM)
+    /* SAES holds DHUK; TF-M HUK derivation uses it from the secure world only */
     HAL_GTZC_TZSC_ConfigPeriphAttributes(GTZC_PERIPH_SAES, GTZC_TZSC_PERIPH_SEC | GTZC_TZSC_PERIPH_PRIV);
     HAL_GTZC_TZIC_EnableIT(GTZC_PERIPH_SAES);
-#endif
 
     FLOW_CONTROL_STEP(uFlowProtectValue, FLOW_STEP_GTZC_PERIPH_CFG, FLOW_CTRL_GTZC_PERIPH_CFG);
 
@@ -696,12 +685,10 @@ void gtzc_init_cfg(void)
       Error_Handler();
     }
 #endif
-#if defined (HW_CRYPTO_DPA_AES) || defined (HW_CRYPTO_DPA_GCM)
     HAL_GTZC_TZSC_GetConfigPeriphAttributes(GTZC_PERIPH_SAES, &gtzc_periph_att);
     if (gtzc_periph_att != (GTZC_TZSC_PERIPH_SEC | GTZC_TZSC_PERIPH_PRIV)) {
       Error_Handler();
     }
-#endif
 
     FLOW_CONTROL_STEP(uFlowProtectValue, FLOW_STEP_GTZC_PERIPH_CH, FLOW_CTRL_GTZC_PERIPH_CH);
   }
