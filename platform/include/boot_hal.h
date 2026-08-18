@@ -97,6 +97,14 @@ int32_t boot_platform_post_init(void);
  */
 __NO_RETURN void boot_platform_start_next_image(struct boot_arm_vector_table *vt);
 
+#ifdef BL2_DEBUG_JUMP_TO_NS
+/**
+ * \brief Debug path: jump to NS Reset_Handler without image verification.
+ *        Defined in platform boot_hal_bl2 when BL2_DEBUG_JUMP_TO_NS is set.
+ */
+__NO_RETURN void boot_debug_jump_to_ns(void);
+#endif
+
 /**
  * \brief Platform-specific error state
  *

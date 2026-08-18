@@ -321,6 +321,61 @@ __attribute__((naked)) void boot_jump_to_ns_image(uint32_t reset_handler_addr)
 #endif /* __ICCARM__ */
 
 #endif /* MCUBOOT_EXT_LOADER */
+
+#if defined(BL2_DEBUG_JUMP_TO_NS) && !defined(MCUBOOT_EXT_LOADER)
+__attribute__((naked)) void boot_jump_to_ns_image(uint32_t reset_handler_addr)
+{
+    __ASM volatile(
+#if !defined(__ICCARM__)
+        ".syntax unified                 \n"
+#endif /* !defined(__ICCARM__) */
+        "mov     r7, r0                  \n"
+        "bl      boot_clean_ns_ram_area  \n"
+        "movs    r0, #0                  \n"
+        "mov     r1, r0                  \n"
+        "mov     r2, r0                  \n"
+        "mov     r3, r0                  \n"
+        "mov     r4, r0                  \n"
+        "mov     r5, r0                  \n"
+        "mov     r6, r0                  \n"
+        "mov     r8, r0                  \n"
+        "mov     r9, r0                  \n"
+        "mov     r10, r0                 \n"
+        "mov     r11, r0                 \n"
+        "mov     r12, r0                 \n"
+        "mov     lr,  r0                 \n"
+        "bic.w   r7, r7, #1              \n"
+        "blxns   r7                      \n"
+    );
+}
+#endif /* BL2_DEBUG_JUMP_TO_NS && !MCUBOOT_EXT_LOADER */
+
+#ifdef BL2_DEBUG_JUMP_TO_NS
+/* Place code in a specific section */
+#if defined(__ICCARM__)
+#pragma default_function_attributes = @ ".BL2_NoHdp_Code"
+#else
+__attribute__((section(".BL2_NoHdp_Code")))
+#endif /* __ICCARM__ */
+__NO_RETURN void boot_debug_jump_to_ns(void)
+{
+    uintptr_t ns_entry = NS_CODE_START;
+#if defined(BL2_DEBUG_NS_ENTRY_ADDR) && (BL2_DEBUG_NS_ENTRY_ADDR != 0U)
+    ns_entry = BL2_DEBUG_NS_ENTRY_ADDR;
+#endif
+    struct boot_arm_vector_table *vt = (struct boot_arm_vector_table *)ns_entry;
+
+    SCB_NS->VTOR = (uint32_t)ns_entry;
+    SYSCFG->CSLCKR |= SYSCFG_CSLCKR_LOCKSVTAIRCR;
+    __TZ_set_MSP_NS(*(uint32_t *)ns_entry);
+    boot_stm_jump_to_next_image((uint32_t)&boot_jump_to_ns_image, vt->reset);
+
+#if !defined(__ICCARM__)
+    __builtin_unreachable();
+#endif /* defined(__ICCARM__) */
+}
+#endif /* BL2_DEBUG_JUMP_TO_NS */
+
 #if defined(__ICCARM__)
 #pragma default_function_attributes = @ ".BL2_NoHdp_Code"
 #elif defined(__CC_ARM)

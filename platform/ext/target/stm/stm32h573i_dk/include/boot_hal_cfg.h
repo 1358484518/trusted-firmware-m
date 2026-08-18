@@ -37,6 +37,15 @@
 #define RTC_SYNCH_PREDIV   0x00FF
 #endif
 
+/*
+ * Debug bring-up: skip MCUboot verify/OTP and jump straight to the NS image.
+ * When enabled, rebuild BL2 only and flash bl2.hex. Comment out TFM_DEV_MODE
+ * below to avoid UART init hangs during this test.
+ */
+/* #define BL2_DEBUG_JUMP_TO_NS */
+/* Optional fixed entry (secure flash alias); 0 = use NS_CODE_START from region_defs.h */
+/* #define BL2_DEBUG_NS_ENTRY_ADDR  0x0C088400U */
+
 #define TFM_DEV_MODE
 /* ICache */
 #define TFM_ICACHE_ENABLE /*!< Instruction cache enable */

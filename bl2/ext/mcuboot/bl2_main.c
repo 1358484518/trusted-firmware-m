@@ -30,6 +30,7 @@
 #include "bootutil/fault_injection_hardening.h"
 #include "flash_map_backend/flash_map_backend.h"
 #include "boot_hal.h"
+#include "boot_hal_cfg.h"
 #include "uart_stdout.h"
 #include "tfm_plat_otp.h"
 #include "tfm_plat_provisioning.h"
@@ -110,6 +111,15 @@ static inline void uart_putch(char ch)
 
 int main(void)
 {
+#ifdef BL2_DEBUG_JUMP_TO_NS
+    /*
+     * Minimal init then direct NS jump — bypasses stdio, RNG, security,
+     * PSA/crypto, and MCUboot image verification for step-by-step debug.
+     */
+    HAL_Init();
+    boot_debug_jump_to_ns();
+#endif
+
     int err;
     fih_ret fih_rc = FIH_FAILURE;
     fih_ret recovery_succeeded = FIH_FAILURE;
