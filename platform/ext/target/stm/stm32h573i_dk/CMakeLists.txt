@@ -12,6 +12,13 @@ set(STM_COMMON_DIR ${STM32H573I_DK_DIR}/../common)
 
 #def for stm32h5xx
 include(${STM_COMMON_DIR}/stm32h5xx/CMakeLists.txt)
+
+# Board-specific headers (flash_layout, region_defs, stm32h5xx_hal_conf, board.h)
+target_include_directories(platform_region_defs
+    INTERFACE
+        ${STM32H573I_DK_DIR}/include
+)
+
 #========================= Platform defs ===============================#
 
 # Specify the location of platform specific build dependencies.

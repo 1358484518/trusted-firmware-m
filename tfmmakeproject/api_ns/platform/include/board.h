@@ -18,12 +18,6 @@
   */
 #ifndef __BOARD_H__
 #define __BOARD_H__
-
-/* External HSE crystal frequency (Hz). STM32H573I-DK uses 25 MHz; many custom boards use 8 MHz. */
-#ifndef BOARD_HSE_HZ
-#define BOARD_HSE_HZ    8000000UL
-#endif
-
 /* config for usart */
 
 #if 0

@@ -18,6 +18,12 @@
   */
 #ifndef __BOARD_H__
 #define __BOARD_H__
+
+/* External HSE crystal frequency (Hz). Change for your board crystal. */
+#ifndef BOARD_HSE_HZ
+#define BOARD_HSE_HZ 8000000UL
+#endif
+
 /* config for usart */
 
 #if 0
