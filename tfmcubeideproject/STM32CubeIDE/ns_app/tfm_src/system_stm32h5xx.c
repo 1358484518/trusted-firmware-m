@@ -143,10 +143,6 @@ void SystemInit(void)
    SCB->CPACR |= ((3UL << 20U)|(3UL << 22U));  /* set CP10 and CP11 Full Access */
   #endif
 
-  /* SRAM3 is gated by AHB2. Enable it so NS can use RAM3 (0x20050000). */
-  RCC->AHB2ENR |= RCC_AHB2ENR_SRAM3EN;
-  (void)RCC->AHB2ENR;
-
   /* Configure the System clock source, PLL Multiplier and Divider factors,
      AHB/APBx prescalers and Flash settings for System clock 250 MHz */
   SetSysClock();

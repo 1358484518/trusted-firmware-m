@@ -26,8 +26,6 @@ MEMORY
 {
   FLASH (rx)  : ORIGIN = NS_CODE_START, LENGTH = NS_CODE_SIZE
   RAM   (rwx) : ORIGIN = NS_DATA_START, LENGTH = NS_DATA_SIZE
-  /* SRAM3: 320 KB after SRAM3_ECC is disabled (RM0481 §6.3.2). Do not merge with RAM. */
-  RAM3  (rwx) : ORIGIN = NS_DATA_START_2, LENGTH = NS_DATA_SIZE_2
 }
 
 __heap_size__  = NS_HEAP_SIZE;
@@ -178,18 +176,4 @@ SECTIONS
     } > RAM
 
     PROVIDE(__stack = __StackTop);
-
-    /* SRAM3 (0x20050000). Uninitialized so startup does not zero 320 KB. */
-    .sram3 (NOLOAD) :
-    {
-        . = ALIGN(4);
-        __sram3_start__ = .;
-        __bss2_start__ = .;
-        *(.sram3)
-        *(.sram3*)
-        *(.bss.sram3*)
-        . = ALIGN(4);
-        __bss2_end__ = .;
-        __sram3_end__ = .;
-    } > RAM3
 }
