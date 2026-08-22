@@ -38,3 +38,12 @@ LR_CODE NS_CODE_START {
     }
 }
 
+/* SRAM3: 320 KB after SRAM3_ECC is disabled. Do not merge with SRAM1. */
+LR_SRAM3 NS_DATA_START_2 {
+    ER_SRAM3 NS_DATA_START_2 UNINIT NS_DATA_SIZE_2 {
+        *(.sram3)
+        *(.sram3*)
+        *(.bss.sram3*)
+    }
+}
+

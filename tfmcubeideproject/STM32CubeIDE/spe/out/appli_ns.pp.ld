@@ -3,6 +3,7 @@ MEMORY
 {
   FLASH (rx) : ORIGIN = ((((0x08000000)) + ((((((((((((((0xC000)) +((0x2000)+(0x2000)))+(0x0) )+(0x18000)) + (0x0))+(((0x2000)) + ((0x2000))))+((0x2000)+(0x2000)))+((0x2000)+(0x2000))) + ((0x2000)+(0x2000)))) + (0x50000)) + 0x400)))), LENGTH = (((0x90000) - 0x400 - 0x2000))
   RAM (rwx) : ORIGIN = ((((0x20000000)) + (0))), LENGTH = ((((0x40000) +(0x10000 - (0x400))) - (((0x10000 - (0x400))) + (0x10000))))
+  RAM3 (rwx) : ORIGIN = ((0x20050000)), LENGTH = ((0x50000))
 }
 __heap_size__ = 0x0001000;
 __stack_size__ = 0x0001000;
@@ -111,4 +112,16 @@ SECTIONS
         __heap_limit = .;
     } > RAM
     PROVIDE(__stack = __StackTop);
+    .sram3 (NOLOAD) :
+    {
+        . = ALIGN(4);
+        __sram3_start__ = .;
+        __bss2_start__ = .;
+        *(.sram3)
+        *(.sram3*)
+        *(.bss.sram3*)
+        . = ALIGN(4);
+        __bss2_end__ = .;
+        __sram3_end__ = .;
+    } > RAM3
 }

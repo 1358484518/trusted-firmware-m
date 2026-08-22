@@ -34,7 +34,7 @@ define overlay HEAP_OVL         {block HEAP};
 define overlay HEAP_OVL         {block ARM_LIB_HEAP};
 keep {block CSTACK, block HEAP, block ARM_LIB_HEAP};
 
-do not initialize  { section .noinit };
+do not initialize  { section .noinit, section .sram3 };
 initialize by copy { readwrite };
 if (isdefinedsymbol(__USE_DLIB_PERTHREAD))
 {
@@ -48,3 +48,7 @@ define block DATA with fixed order, maximum size = NS_DATA_SIZE {
        overlay HEAP_OVL
 };
 place at address NS_DATA_START {block DATA};
+
+/* SRAM3: 320 KB after SRAM3_ECC is disabled. Do not merge with SRAM1. */
+define block ER_SRAM3 with alignment = 8, maximum size = NS_DATA_SIZE_2 { section .sram3 };
+place at address NS_DATA_START_2 {block ER_SRAM3};

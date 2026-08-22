@@ -27,7 +27,8 @@ remove_bank1_protect="-ob SECWM1_STRT=127 SECWM1_END=0 WRPSGn1=0xffffffff"
 remove_bank2_protect="-ob SECWM2_STRT=127 SECWM2_END=0 WRPSGn2=0xffffffff" 
 erase_all="-e all"
 remove_hdp_protection="-ob HDP1_END=0 HDP2_END=0"
-default_ob1="-ob SECBOOTADD="0xC0100" HDP1_STRT=1 HDP1_END=0 HDP2_STRT=1 HDP2_END=0 SWAP_BANK=0 SRAM2_RST=0 SRAM2_ECC=0"
+# SRAM2_ECC=0 keeps SRAM2 ECC on (BL2 checks it). SRAM3_ECC=1 frees the last 64 KB of SRAM3.
+default_ob1="-ob SECBOOTADD="0xC0100" HDP1_STRT=1 HDP1_END=0 HDP2_STRT=1 HDP2_END=0 SWAP_BANK=0 SRAM2_RST=0 SRAM2_ECC=0 SRAM3_ECC=1"
 default_ob2="-ob SECWM2_STRT=0 SECWM2_END=127 SECWM1_STRT=0 SECWM1_END=127"
 
 
