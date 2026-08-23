@@ -44,6 +44,7 @@
 									<listOptionValue builtIn="false" value="STM32H573xx"/>
 									<listOptionValue builtIn="false" value="DOMAIN_NS=1"/>
 									<listOptionValue builtIn="false" value="CONFIG_TFM_FLOAT_ABI=2"/>
+									<listOptionValue builtIn="false" value="CONFIG_TFM_ENABLE_FP"/>
 									<listOptionValue builtIn="false" value="CONFIG_TFM_ENABLE_CP10CP11"/>
 									<listOptionValue builtIn="false" value="PLATFORM_DEFAULT_CRYPTO_KEYS"/>
 									<listOptionValue builtIn="false" value="CONFIG_TFM_USE_TRUSTZONE"/>
@@ -150,6 +151,7 @@
 									<listOptionValue builtIn="false" value="STM32H573xx"/>
 									<listOptionValue builtIn="false" value="DOMAIN_NS=1"/>
 									<listOptionValue builtIn="false" value="CONFIG_TFM_FLOAT_ABI=2"/>
+									<listOptionValue builtIn="false" value="CONFIG_TFM_ENABLE_FP"/>
 									<listOptionValue builtIn="false" value="CONFIG_TFM_ENABLE_CP10CP11"/>
 									<listOptionValue builtIn="false" value="PLATFORM_DEFAULT_CRYPTO_KEYS"/>
 									<listOptionValue builtIn="false" value="CONFIG_TFM_USE_TRUSTZONE"/>
