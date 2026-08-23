@@ -33,6 +33,9 @@
 #include "uart_stdout.h"
 #include "tfm_plat_otp.h"
 #include "tfm_plat_provisioning.h"
+#ifdef BL2_SKIP_IMAGE_VERIFY
+#include "region_defs.h"
+#endif
 #ifdef TEST_BL2
 #include "mcuboot_suites.h"
 #endif /* TEST_BL2 */
@@ -61,6 +64,7 @@ __asm("  .global __use_no_semihosting\n");
 
 /* Static buffer to be used by mbedtls for memory allocation */
 static uint8_t mbedtls_mem_buf[BL2_MBEDTLS_MEM_BUF_LEN];
+#ifndef BL2_SKIP_IMAGE_VERIFY
 struct boot_rsp rsp;
 
 static void do_boot(struct boot_rsp *rsp)
@@ -100,6 +104,7 @@ static void do_boot(struct boot_rsp *rsp)
      */
     boot_platform_start_next_image(vt);
 }
+#endif /* !BL2_SKIP_IMAGE_VERIFY */
 
 #if defined(TEST_BL2)
 static inline void uart_putch(char ch)
@@ -112,9 +117,11 @@ int main(void)
 {
     int err;
     fih_ret fih_rc = FIH_FAILURE;
+#ifndef BL2_SKIP_IMAGE_VERIFY
     fih_ret recovery_succeeded = FIH_FAILURE;
-    enum tfm_plat_err_t plat_err;
     int32_t image_id;
+#endif
+    enum tfm_plat_err_t plat_err;
     bool provisioning_required;
 
     /* Initialise the mbedtls static memory allocator so that mbedtls allocates
@@ -193,6 +200,22 @@ int main(void)
     (void)run_mcuboot_testsuite();
 #endif /* TEST_BL2 */
 
+#ifdef BL2_SKIP_IMAGE_VERIFY
+    /*
+     * Development path: firmware is downloaded to the SPE execution address
+     * (S_CODE_START = primary slot + BL2_HEADER_SIZE), not as a signed MCUBoot
+     * image. Skip header parse, signature, and rollback, then jump.
+     *
+     * Flash tfm_s ELF/bin at S_CODE_START (STM32H573: 0x0C038400).
+     * Flash NS  ELF/bin at NS_CODE_START (STM32H573: 0x08088400).
+     */
+    BOOT_LOG_INF("Skipping image verification");
+    BOOT_LOG_INF("Jumping to S_CODE_START: 0x%x", (unsigned int)S_CODE_START);
+#if (LOG_LEVEL > LOG_LEVEL_NONE) || defined(TEST_BL2)
+    stdio_uninit();
+#endif
+    boot_platform_start_next_image((struct boot_arm_vector_table *)S_CODE_START);
+#else
     /* Images are loaded in reverse order so that the last image loaded is the
      * TF-M image, which means the response is filled correctly.
      */
@@ -240,6 +263,7 @@ int main(void)
                                                     rsp.br_hdr->ih_ver.iv_revision);
     BOOT_LOG_INF("Jumping to the first image slot");
     do_boot(&rsp);
+#endif /* BL2_SKIP_IMAGE_VERIFY */
 
     BOOT_LOG_ERR("Never should get here");
     boot_platform_error_state(0);

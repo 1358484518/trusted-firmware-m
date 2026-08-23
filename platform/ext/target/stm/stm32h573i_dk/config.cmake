@@ -17,6 +17,9 @@ set(MCUBOOT_DATA_SHARING                   ON          CACHE BOOL      "Enable D
 set(MCUBOOT_BOOTSTRAP                      ON          CACHE BOOL      "Allow initial state with images in secondary slots(empty primary slots)")
 set(MCUBOOT_ENC_IMAGES                     OFF          CACHE BOOL     "Enable image encryption (AES)")
 set(MCUBOOT_ENCRYPT_RSA                    OFF          CACHE BOOL     "Use RSA-OAEP for encryption key wrapping")
+# Development: program tfm_s / NS ELF at the linker execution addresses and
+# skip MCUBoot header parse, signature check, and rollback. Not for production.
+set(BL2_SKIP_IMAGE_VERIFY                  ON           CACHE BOOL     "Skip BL2 image verification and jump to S_CODE_START")
 ################################## Dependencies ########################################
 set(TFM_PARTITION_INTERNAL_TRUSTED_STORAGE ON          CACHE BOOL      "Enable Internal Trusted Storage partition")
 set(TFM_PARTITION_CRYPTO                   ON          CACHE BOOL      "Enable Crypto partition")

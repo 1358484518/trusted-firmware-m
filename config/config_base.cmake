@@ -81,6 +81,7 @@ set(CONFIG_TFM_REUSE_COPY_AREA_FOR_SP_STACKS   OFF         CACHE BOOL      "Whet
 
 set(BL1                                 OFF         CACHE BOOL      "Whether to build BL1")
 set(BL2                                 ON          CACHE BOOL      "Whether to build BL2")
+set(BL2_SKIP_IMAGE_VERIFY               OFF         CACHE BOOL      "Skip MCUBoot image verification and jump to S_CODE_START. Development only; firmware is programmed at the SPE execution address.")
 set(NS_EVALUATION_APP_PATH              ""          CACHE PATH      "Path to TFM NS Evaluation Application")
 
 set(TFM_ISOLATION_LEVEL                 1           CACHE STRING    "Isolation level")
