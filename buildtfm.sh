@@ -127,7 +127,11 @@ if [[ -f "${STAMP}" ]] && [[ "$(cat "${STAMP}")" != "${STAMP_VAL}" ]]; then
 fi
 
 # Python：用 python -m pip，避免拷贝来的 venv shebang 失效
-VENV_DIR="${WORK_ROOT}/.venv"
+# 脚本在仓库内时 WORK_ROOT 可能是 /，venv 放到 TF-M 根目录
+VENV_DIR="${TFM_ROOT}/.venv"
+if [[ ! -w "$(dirname "${VENV_DIR}")" ]]; then
+    VENV_DIR="${HOME}/.tfm-venv"
+fi
 if [[ ! -x "${VENV_DIR}/bin/python" ]]; then
     echo ">>> 创建 Python venv: ${VENV_DIR}"
     if ! python3 -m venv "${VENV_DIR}"; then
