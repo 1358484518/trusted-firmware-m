@@ -15,6 +15,9 @@
 set(TFM_SYSTEM_PROCESSOR cortex-m33)
 set(TFM_SYSTEM_ARCHITECTURE armv8-m.main)
 set(CRYPTO_HW_ACCELERATOR_TYPE stm)
+# STM32H573 Cortex-M33 has a single-precision FPU (FPv5-SP-D16)
+set(CONFIG_TFM_FP_ARCH "fpv5-sp-d16")
+set(CONFIG_TFM_FP_ARCH_ASM "FPv5-SP")
 add_compile_definitions(
     STM32H573xx
     USE_HAL_DRIVER

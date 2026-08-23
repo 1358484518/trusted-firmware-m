@@ -53,6 +53,11 @@ Configuration and Build
 GNUARM/ARMCLANG/IARARM compilation is available for this target.
 and build the selected configuration as follow.
 
+Hardware FPU is enabled by default (``CONFIG_TFM_ENABLE_FP=ON``,
+``-mfloat-abi=hard -mfpu=fpv5-sp-d16``). SPE and NSPE must use the same
+FP ABI. Rebuild the SPE after this option changes so NSACR/CP10/CP11 and
+FPU context switching stay consistent.
+
 The build configuration for TF-M is provided to the build system using command
 line arguments. Required arguments are noted below.
 
