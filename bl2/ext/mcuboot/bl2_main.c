@@ -62,9 +62,9 @@ __asm("  .global __use_no_semihosting\n");
 #define BL2_MBEDTLS_MEM_BUF_LEN 0x2000
 #endif
 
+#ifndef BL2_SKIP_IMAGE_VERIFY
 /* Static buffer to be used by mbedtls for memory allocation */
 static uint8_t mbedtls_mem_buf[BL2_MBEDTLS_MEM_BUF_LEN];
-#ifndef BL2_SKIP_IMAGE_VERIFY
 struct boot_rsp rsp;
 
 static void do_boot(struct boot_rsp *rsp)
@@ -116,18 +116,20 @@ static inline void uart_putch(char ch)
 int main(void)
 {
     int err;
-    fih_ret fih_rc = FIH_FAILURE;
 #ifndef BL2_SKIP_IMAGE_VERIFY
+    fih_ret fih_rc = FIH_FAILURE;
     fih_ret recovery_succeeded = FIH_FAILURE;
     int32_t image_id;
 #endif
     enum tfm_plat_err_t plat_err;
     bool provisioning_required;
 
+#ifndef BL2_SKIP_IMAGE_VERIFY
     /* Initialise the mbedtls static memory allocator so that mbedtls allocates
      * memory from the provided static buffer instead of from the heap.
      */
     mbedtls_memory_buffer_alloc_init(mbedtls_mem_buf, BL2_MBEDTLS_MEM_BUF_LEN);
+#endif
 
 #if (LOG_LEVEL > LOG_LEVEL_NONE) || defined(TEST_BL2)
     stdio_init();
@@ -171,11 +173,13 @@ int main(void)
     }
     tfm_plat_provisioning_check_for_dummy_keys();
 
+#ifndef BL2_SKIP_IMAGE_VERIFY
     FIH_CALL(boot_nv_security_counter_init, fih_rc);
     if (FIH_NOT_EQ(fih_rc, FIH_SUCCESS)) {
         BOOT_LOG_ERR("Error while initializing the security counter");
         boot_platform_error_state(fih_rc);
     }
+#endif
 
     /* Perform platform specific post-initialization */
     err = boot_platform_post_init();
@@ -184,6 +188,7 @@ int main(void)
         boot_platform_error_state(err);
     }
 
+#ifndef BL2_SKIP_IMAGE_VERIFY
     /* Since bootloader is configured to use PSA Crypto APIs in the
      * abstraction layer, the component needs to be explicitly initialized
      * before MCUboot APIs, as the crypto abstraction expects that the init
@@ -199,18 +204,11 @@ int main(void)
 #ifdef TEST_BL2
     (void)run_mcuboot_testsuite();
 #endif /* TEST_BL2 */
+#endif /* !BL2_SKIP_IMAGE_VERIFY */
 
 #ifdef BL2_SKIP_IMAGE_VERIFY
-    /*
-     * Development path: firmware is downloaded to the SPE execution address
-     * (S_CODE_START = primary slot + BL2_HEADER_SIZE), not as a signed MCUBoot
-     * image. Skip header parse, signature, and rollback, then jump.
-     *
-     * Flash tfm_s ELF/bin at S_CODE_START (STM32H573: 0x0C038400).
-     * Flash NS  ELF/bin at NS_CODE_START (STM32H573: 0x08088400).
-     */
-    BOOT_LOG_INF("Skipping image verification");
-    BOOT_LOG_INF("Jumping to S_CODE_START: 0x%x", (unsigned int)S_CODE_START);
+    /* Skip MCUBoot verify/swap; jump to SPE vector table. */
+    BOOT_LOG_INF("Jumping to 0x%x", (unsigned int)S_CODE_START);
 #if (LOG_LEVEL > LOG_LEVEL_NONE) || defined(TEST_BL2)
     stdio_uninit();
 #endif
@@ -289,6 +287,8 @@ int crypto_hw_accelerator_init(void)
 
 int crypto_hw_accelerator_finish(void)
 {
+#ifndef BL2_SKIP_IMAGE_VERIFY
     mbedtls_psa_crypto_free();
+#endif
     return 0;
 }
