@@ -1,29 +1,38 @@
-# Remap Intel HEX from STM32 secure flash alias 0x0Cxxxxxx to 0x08xxxxxx.
-# J-Link / CubeProgrammer program the 0x08000000 flash window, not 0x0C000000.
+# Convert Intel HEX to a dense .bin on the 0x08 flash alias.
+# 0x0Cxxxxxx (secure alias) is mapped to 0x08xxxxxx.
 param(
     [Parameter(Mandatory = $true)][string]$InFile,
     [Parameter(Mandatory = $true)][string]$OutFile
 )
 
-$lines = Get-Content -LiteralPath $InFile
-$out = New-Object System.Collections.Generic.List[string]
-foreach ($line in $lines) {
-    $t = $line.Trim()
-    if ($t.StartsWith(':') -and $t.Length -ge 15 -and $t.Substring(7, 2) -eq '04') {
-        $data = $t.Substring(9, 4)
-        $hi = [Convert]::ToInt32($data, 16)
-        if ($hi -ge 0x0C00 -and $hi -le 0x0C1F) {
-            $nhi = $hi - 0x0400
-            $len = [Convert]::ToInt32($t.Substring(1, 2), 16)
-            $ah = [Convert]::ToInt32($t.Substring(3, 2), 16)
-            $al = [Convert]::ToInt32($t.Substring(5, 2), 16)
-            $d0 = ($nhi -shr 8) -band 0xFF
-            $d1 = $nhi -band 0xFF
-            $sum = $len + $ah + $al + 4 + $d0 + $d1
-            $ck = ((-$sum) -band 0xFF)
-            $t = (':{0:X2}{1:X2}{2:X2}04{3:X4}{4:X2}' -f $len, $ah, $al, $nhi, $ck)
-        }
+$map = New-Object 'System.Collections.Generic.SortedDictionary[uint32,byte]'
+$ela = [uint32]0
+foreach ($raw in Get-Content -LiteralPath $InFile) {
+    $t = $raw.Trim()
+    if (-not $t.StartsWith(':') -or $t.Length -lt 11) { continue }
+    $len = [Convert]::ToInt32($t.Substring(1, 2), 16)
+    $off = [Convert]::ToInt32($t.Substring(3, 4), 16)
+    $typ = [Convert]::ToInt32($t.Substring(7, 2), 16)
+    if ($typ -eq 4 -and $t.Length -ge 15) {
+        $ela = [uint32][Convert]::ToInt32($t.Substring(9, 4), 16)
+        continue
     }
-    $out.Add($t)
+    if ($typ -ne 0) { continue }
+    $addr = ([uint32]($ela -shl 16)) + [uint32]$off
+    if ($addr -ge [uint32]0x0C000000 -and $addr -lt [uint32]0x0C200000) {
+        $addr = $addr - [uint32]0x04000000
+    }
+    for ($i = 0; $i -lt $len; $i++) {
+        $map[[uint32]($addr + $i)] = [Convert]::ToByte($t.Substring(9 + 2 * $i, 2), 16)
+    }
 }
-$out | Set-Content -LiteralPath $OutFile -Encoding ascii
+if ($map.Count -eq 0) { throw "No data records in $InFile" }
+$min = [uint32]($map.Keys | Select-Object -First 1)
+$max = [uint32]($map.Keys | Select-Object -Last 1)
+$size = [int]($max - $min + 1)
+$blob = New-Object byte[] $size
+foreach ($k in $map.Keys) { $blob[$k - $min] = $map[$k] }
+[IO.File]::WriteAllBytes($OutFile, $blob)
+$addrTxt = $OutFile + '.addr'
+Set-Content -LiteralPath $addrTxt -Value ('0x{0:X8}' -f $min) -Encoding ascii
+Write-Output ("LOAD=0x{0:X8} SIZE={1}" -f $min, $size)

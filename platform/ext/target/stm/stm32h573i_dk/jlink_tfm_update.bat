@@ -20,7 +20,7 @@ set "EXIT_CODE=0"
 set "FAILED_STEP="
 set "FLASHED=0"
 set "SKIP_NS=0"
-set "SCRIPT_REV=cube-jlink-20260825c"
+set "SCRIPT_REV=cube-jlink-20260825d"
 set "SN_ARG="
 
 if /i "%~1"=="-h" goto :usage
@@ -41,7 +41,7 @@ echo  STM32H573I-DK  jlink_tfm_update.bat
 echo  rev:  %SCRIPT_REV%
 echo  file: %~f0
 echo  cwd:  %CD%
-echo  J-Link addresses use 0x08 alias, not 0x0C
+echo  J-Link: program 0x08 alias as .bin, no 0x0C hex, SECWM open while flashing
 echo ============================================================
 echo.
 
@@ -105,6 +105,18 @@ echo [ok]   regression finished
 echo.
 
 set "connect=-c port=JLINK ap=1 %sn_option% mode=UR"
+set "connect_no_reset=-c port=JLINK ap=1 %sn_option% mode=HotPlug"
+
+echo [2b] Open SECWM ^(J-Link cannot program fully-secure 0x0C flash^)
+echo CMD: STM32_Programmer_CLI %connect_no_reset% -ob SECWM1_STRT=127 SECWM1_END=0 SECWM2_STRT=127 SECWM2_END=0
+STM32_Programmer_CLI %connect_no_reset% -ob SECWM1_STRT=127 SECWM1_END=0 SECWM2_STRT=127 SECWM2_END=0
+if errorlevel 1 (
+    echo [FAIL] could not open SECWM
+    set "FAILED_STEP=open SECWM"
+    set "EXIT_CODE=1"
+    goto :finish
+)
+echo.
 
 echo [3] Scan images
 set "FOUND_ANY=0"
@@ -183,6 +195,18 @@ if "%FLASHED%"=="0" (
     goto :finish
 )
 
+echo [4b] Restore full-bank SECWM
+echo CMD: STM32_Programmer_CLI %connect_no_reset% -ob SECWM1_STRT=0 SECWM1_END=127 SECWM2_STRT=0 SECWM2_END=127
+STM32_Programmer_CLI %connect_no_reset% -ob SECWM1_STRT=0 SECWM1_END=127 SECWM2_STRT=0 SECWM2_END=127
+if errorlevel 1 (
+    echo [FAIL] restore SECWM
+    set "FAILED_STEP=restore SECWM"
+    set "EXIT_CODE=1"
+    goto :finish
+)
+echo [ok]   SECWM restored
+echo.
+
 echo [5] Reset MCU
 echo ------------------------------------------------------------
 echo CMD: STM32_Programmer_CLI %connect% -hardRst
@@ -231,20 +255,37 @@ if exist "%~dp0%~1" (
 exit /b 1
 
 :remap_hex
-set "HEX_OUT=%TEMP%\tfm_jlink_%~n1.hex"
-echo [info] remap hex 0x0Cxxxxxx -^> 0x08xxxxxx
+set "HEX_BIN=%TEMP%\tfm_jlink_%~n1.bin"
+set "HEX_ADDR_FILE=%HEX_BIN%.addr"
+echo [info] hex -^> bin on 0x08 alias
 echo        in  %~2
-echo        out %HEX_OUT%
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0jlink_hex_ns_alias.ps1" -InFile "%~2" -OutFile "%HEX_OUT%"
-if errorlevel 1 (
-    echo [FAIL] hex remap failed, copy jlink_hex_ns_alias.ps1 next to this bat
+echo        out %HEX_BIN%
+if not exist "%~dp0jlink_hex_ns_alias.ps1" (
+    echo [FAIL] missing %~dp0jlink_hex_ns_alias.ps1
     set "FAILED_STEP=remap %~1"
     set "EXIT_CODE=1"
     exit /b 1
 )
-if not exist "%HEX_OUT%" (
-    echo [FAIL] remapped hex not created
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0jlink_hex_ns_alias.ps1" -InFile "%~2" -OutFile "%HEX_BIN%"
+if errorlevel 1 (
+    echo [FAIL] hex to bin failed
     set "FAILED_STEP=remap %~1"
+    set "EXIT_CODE=1"
+    exit /b 1
+)
+if not exist "%HEX_BIN%" (
+    echo [FAIL] bin not created
+    set "FAILED_STEP=remap %~1"
+    set "EXIT_CODE=1"
+    exit /b 1
+)
+set "HEX_LOAD="
+if exist "%HEX_ADDR_FILE%" set /p HEX_LOAD=<"%HEX_ADDR_FILE%"
+echo [info] LOAD %HEX_LOAD%
+echo %HEX_LOAD% | findstr /i /c:"0x0C" >nul
+if not errorlevel 1 (
+    echo [FAIL] converted address still 0x0C, will not program secure alias
+    set "FAILED_STEP=remap still 0x0C"
     set "EXIT_CODE=1"
     exit /b 1
 )
@@ -258,10 +299,11 @@ call :remap_hex "%STEP_NAME%" "%STEP_PATH%"
 if errorlevel 1 exit /b 1
 echo ------------------------------------------------------------
 echo DOWNLOAD  %STEP_DESC%  [%STEP_NAME%]
-echo FILE: %HEX_OUT%  ^(remapped^)
-echo CMD:  STM32_Programmer_CLI %connect% -d "%HEX_OUT%" -v
+echo FILE: %HEX_BIN%
+echo ADDR: %HEX_LOAD%   ^(must be 0x08..., never 0x0C...^)
+echo CMD:  STM32_Programmer_CLI %connect% -d "%HEX_BIN%" %HEX_LOAD%
 echo ------------------------------------------------------------
-STM32_Programmer_CLI %connect% -d "%HEX_OUT%" -v > "%TEMP%\tfm_jlink_dl.txt" 2>&1
+STM32_Programmer_CLI %connect% -d "%HEX_BIN%" %HEX_LOAD% > "%TEMP%\tfm_jlink_dl.txt" 2>&1
 set "DLRC=%ERRORLEVEL%"
 call :check_download
 exit /b %ERRORLEVEL%
@@ -275,15 +317,24 @@ echo ------------------------------------------------------------
 echo DOWNLOAD  %STEP_DESC%  [%STEP_NAME%]
 echo FILE: %STEP_PATH%
 echo ADDR: %STEP_ADDR%
-echo CMD:  STM32_Programmer_CLI %connect% -d "%STEP_PATH%" %STEP_ADDR% -v
+echo CMD:  STM32_Programmer_CLI %connect% -d "%STEP_PATH%" %STEP_ADDR%
 echo ------------------------------------------------------------
-STM32_Programmer_CLI %connect% -d "%STEP_PATH%" %STEP_ADDR% -v > "%TEMP%\tfm_jlink_dl.txt" 2>&1
+STM32_Programmer_CLI %connect% -d "%STEP_PATH%" %STEP_ADDR% > "%TEMP%\tfm_jlink_dl.txt" 2>&1
 set "DLRC=%ERRORLEVEL%"
 call :check_download
 exit /b %ERRORLEVEL%
 
 :check_download
 type "%TEMP%\tfm_jlink_dl.txt"
+findstr /c:"0x0C038000" /c:"0x0C00E000" /c:"0x0C088000" "%TEMP%\tfm_jlink_dl.txt" >nul
+if not errorlevel 1 (
+    echo.
+    echo [FAIL] CubeProgrammer still used 0x0C alias. This is the old hex path.
+    echo        Need jlink_tfm_update.bat rev cube-jlink-20260825d and the .ps1.
+    set "FAILED_STEP=download %STEP_NAME% still 0x0C"
+    set "EXIT_CODE=1"
+    exit /b 1
+)
 findstr /i /c:"Data mismatch" /c:"verification failed" /c:"Error: Download" /c:"Error: failed" /c:"No debug probe" /c:"Library not found" "%TEMP%\tfm_jlink_dl.txt" >nul
 if not errorlevel 1 (
     echo.

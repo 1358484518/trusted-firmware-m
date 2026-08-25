@@ -9,7 +9,7 @@ rem  ***************************************************************************
 setlocal EnableExtensions
 set "FAILED_STEP="
 set "EXIT_CODE=0"
-set "SCRIPT_REV=cube-jlink-20260825b"
+set "SCRIPT_REV=cube-jlink-20260825d"
 set "PORT=JLINK"
 set "SN_ARG="
 
@@ -29,7 +29,7 @@ if /i "%~1"=="stlink" (
 
 echo.
 echo ============================================================
-echo  STM32H573I-DK  J-LINK regression  (OEM-iRoT)
+echo  STM32H573I-DK  jlink_regression.bat  (OEM-iRoT)
 echo  rev:  %SCRIPT_REV%
 echo  file: %~f0
 echo ============================================================
@@ -83,7 +83,7 @@ set "remove_bank2_protect=-ob SECWM2_STRT=127 SECWM2_END=0 WRPSGn2=0xffffffff"
 set "erase_all=-e all"
 set "remove_hdp_protection=-ob HDP1_END=0 HDP2_END=0"
 set "default_ob1=-ob SECBOOTADD=0xC0100 HDP1_STRT=1 HDP1_END=0 HDP2_STRT=1 HDP2_END=0 SWAP_BANK=0 SRAM2_RST=0 SRAM2_ECC=0"
-set "default_ob2=-ob SECWM2_STRT=0 SECWM2_END=127 SECWM1_STRT=0 SECWM1_END=127"
+set "default_ob2=-ob SECWM1_STRT=127 SECWM1_END=0 SECWM2_STRT=127 SECWM2_END=0"
 set "boot_ube=-ob BOOT_UBE=0xB4"
 
 echo.
@@ -122,9 +122,9 @@ call :run_cli %connect_no_reset% %default_ob1%
 if errorlevel 1 goto :finish
 
 echo.
-echo [7/8] Default OB2 : bank1+bank2 full secure
+echo [7/8] Leave SECWM open so J-Link can program 0x08 flash
 set "STEP_ID=7/8"
-set "STEP_NAME=Default OB2 SECWM"
+set "STEP_NAME=SECWM open for J-Link"
 call :run_cli %connect_no_reset% %default_ob2%
 if errorlevel 1 goto :finish
 
