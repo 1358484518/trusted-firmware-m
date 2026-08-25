@@ -4,7 +4,7 @@ rem  * STM32H573I-DK TF-M flash after J-Link regression (Windows)
 rem  *
 rem  * J-Link programs the 0x08000000 flash window. Hex files that use the
 rem  * secure alias 0x0Cxxxxxx are remapped (0x0C - 0x04000000 = 0x08).
-rem  * Same conversion as TFM_BIN2HEX.sh for drag-and-drop.
+rem  * Hex files are converted with jlink_hex_ns_alias.py (Python).
 rem  *
 rem  * Prefer .bin:
 rem  *   tfm_s_signed.bin       0x08038000
@@ -20,7 +20,7 @@ set "EXIT_CODE=0"
 set "FAILED_STEP="
 set "FLASHED=0"
 set "SKIP_NS=0"
-set "SCRIPT_REV=cube-jlink-20260825f"
+set "SCRIPT_REV=cube-jlink-20260825g"
 set "SN_ARG="
 
 if /i "%~1"=="-h" goto :usage
@@ -255,9 +255,10 @@ if exist "%~dp0%~1" (
 exit /b 1
 
 :remap_hex
-set "HEX_BIN=%TEMP%\tfm_jlink_%~n1.bin"
+rem Write .bin next to the .hex so the next run picks up tfm_s_ns_signed.bin / bl2.bin.
+set "HEX_BIN=%~dpn2.bin"
 set "HEX_ADDR_FILE=%HEX_BIN%.addr"
-echo [info] hex -^> bin on 0x08 alias ^(python^)
+echo [info] hex -^> bin on 0x08 alias ^(python^), keep in image folder
 echo        in  %~2
 echo        out %HEX_BIN%
 if not exist "%~dp0jlink_hex_ns_alias.py" (
@@ -341,7 +342,7 @@ findstr /c:"0x0C038000" /c:"0x0C00E000" /c:"0x0C088000" "%TEMP%\tfm_jlink_dl.txt
 if not errorlevel 1 (
     echo.
     echo [FAIL] CubeProgrammer still used 0x0C alias. This is the old hex path.
-    echo        Need jlink_tfm_update.bat rev cube-jlink-20260825d and the .ps1.
+    echo        Need jlink_tfm_update.bat rev cube-jlink-20260825f and jlink_hex_ns_alias.py
     set "FAILED_STEP=download %STEP_NAME% still 0x0C"
     set "EXIT_CODE=1"
     exit /b 1

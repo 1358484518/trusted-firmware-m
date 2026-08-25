@@ -20,7 +20,7 @@ set "EXIT_CODE=0"
 set "FAILED_STEP="
 set "FLASHED=0"
 set "SKIP_NS=0"
-set "SCRIPT_REV=cube-jlink-20260825f"
+set "SCRIPT_REV=cube-jlink-20260825g"
 set "SN_ARG="
 
 if /i "%~1"=="-h" goto :usage
@@ -255,9 +255,10 @@ if exist "%~dp0%~1" (
 exit /b 1
 
 :remap_hex
-set "HEX_BIN=%TEMP%\tfm_jlink_%~n1.bin"
+rem Write .bin next to the .hex so the next run picks up tfm_s_ns_signed.bin / bl2.bin.
+set "HEX_BIN=%~dpn2.bin"
 set "HEX_ADDR_FILE=%HEX_BIN%.addr"
-echo [info] hex -^> bin on 0x08 alias ^(python^)
+echo [info] hex -^> bin on 0x08 alias ^(python^), keep in image folder
 echo        in  %~2
 echo        out %HEX_BIN%
 if not exist "%~dp0jlink_hex_ns_alias.py" (

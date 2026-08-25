@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
-"""Intel HEX -> bin, map STM32 secure alias 0x0Cxxxxxx to 0x08xxxxxx."""
+"""Intel HEX -> bin, map STM32 secure alias 0x0Cxxxxxx to 0x08xxxxxx.
+
+Writes the .bin next to the caller-chosen OutFile. If that .bin is newer
+than the hex, conversion is skipped so the next flash run can reuse it.
+"""
 import argparse
+import os
 import sys
 
 MAX_SIZE = 2 * 1024 * 1024
@@ -33,6 +38,15 @@ def main():
     p.add_argument("-InFile", dest="infile", required=True)
     p.add_argument("-OutFile", dest="outfile", required=True)
     args = p.parse_args()
+    addr_path = args.outfile + ".addr"
+
+    if os.path.isfile(args.outfile) and os.path.isfile(args.infile):
+        if os.path.getmtime(args.outfile) >= os.path.getmtime(args.infile) and os.path.isfile(addr_path):
+            with open(addr_path, "r", encoding="ascii") as f:
+                load = f.read().strip()
+            print("REUSE %s" % args.outfile)
+            print("LOAD=%s" % load)
+            return
 
     recs = list(records(args.infile))
     if not recs:
