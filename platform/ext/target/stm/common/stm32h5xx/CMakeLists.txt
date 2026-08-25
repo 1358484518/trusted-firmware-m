@@ -219,7 +219,6 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../platform/ext/target/
          ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../platform/ext/target/stm/stm32h573i_dk/jlink_regression.bat
          ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../platform/ext/target/stm/stm32h573i_dk/tfm_update.bat
          ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../platform/ext/target/stm/stm32h573i_dk/jlink_tfm_update.bat
-         ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../platform/ext/target/stm/stm32h573i_dk/jlink_hex_ns_alias.ps1
          ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../platform/ext/target/stm/stm32h573i_dk/jlink_hex_ns_alias.py
          ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../platform/ext/target/stm/stm32h573i_dk/jlink_ob_test.bat
          ${PREPROCESSOR_FILE}
