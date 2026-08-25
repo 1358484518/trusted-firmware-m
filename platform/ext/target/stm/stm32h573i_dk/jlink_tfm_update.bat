@@ -20,7 +20,7 @@ set "EXIT_CODE=0"
 set "FAILED_STEP="
 set "FLASHED=0"
 set "SKIP_NS=0"
-set "SCRIPT_REV=cube-jlink-20260825d"
+set "SCRIPT_REV=cube-jlink-20260825e"
 set "SN_ARG="
 
 if /i "%~1"=="-h" goto :usage
@@ -260,14 +260,25 @@ set "HEX_ADDR_FILE=%HEX_BIN%.addr"
 echo [info] hex -^> bin on 0x08 alias
 echo        in  %~2
 echo        out %HEX_BIN%
-if not exist "%~dp0jlink_hex_ns_alias.ps1" (
-    echo [FAIL] missing %~dp0jlink_hex_ns_alias.ps1
+if not exist "%~dp0jlink_hex_ns_alias.ps1" if not exist "%~dp0jlink_hex_ns_alias.py" (
+    echo [FAIL] missing jlink_hex_ns_alias.ps1 / .py next to this bat
     set "FAILED_STEP=remap %~1"
     set "EXIT_CODE=1"
     exit /b 1
 )
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0jlink_hex_ns_alias.ps1" -InFile "%~2" -OutFile "%HEX_BIN%"
-if errorlevel 1 (
+set "CONV_RC=1"
+where python >nul 2>&1
+if not errorlevel 1 if exist "%~dp0jlink_hex_ns_alias.py" (
+    echo [info] converting with python
+    python "%~dp0jlink_hex_ns_alias.py" -InFile "%~2" -OutFile "%HEX_BIN%"
+    set "CONV_RC=!ERRORLEVEL!"
+)
+if not "!CONV_RC!"=="0" (
+    echo [info] converting with powershell
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0jlink_hex_ns_alias.ps1" -InFile "%~2" -OutFile "%HEX_BIN%"
+    set "CONV_RC=!ERRORLEVEL!"
+)
+if not "!CONV_RC!"=="0" (
     echo [FAIL] hex to bin failed
     set "FAILED_STEP=remap %~1"
     set "EXIT_CODE=1"
