@@ -21,7 +21,7 @@ setlocal EnableExtensions
 set "EXIT_CODE=0"
 set "FAILED_STEP="
 set "FLASHED=0"
-set "SCRIPT_REV=cube-jlink-20260825"
+set "SCRIPT_REV=cube-jlink-20260825b"
 set "PROBE=jlink"
 set "PORT=JLINK"
 set "SN_ARG="
@@ -55,7 +55,7 @@ set "ADDR_NS=0x0C088000"
 
 echo.
 echo ============================================================
-echo  STM32H573I-DK  TF-M UPDATE
+echo  STM32H573I-DK  J-LINK TF-M UPDATE
 echo  rev:  %SCRIPT_REV%
 echo  file: %~f0
 echo  cwd:  %CD%
@@ -89,8 +89,9 @@ if errorlevel 1 (
     goto :finish
 )
 echo [ok]   STM32_Programmer_CLI ready
-call :add_jlink_path
-call :detect_probe
+for /d %%D in ("%ProgramFiles%\SEGGER\JLink*") do (
+    if exist "%%~D\JLinkARM.dll" set "PATH=%%~D;%PATH%"
+)
 echo [info] using probe=%PROBE%  port=%PORT%
 echo.
 
@@ -204,99 +205,9 @@ echo   tfm_update.bat ^<SN^>
 echo   tfm_update.bat jlink [SN]
 echo   tfm_update.bat stlink [SN]
 echo.
-echo With no probe name, tries CubeProgrammer -c port=JLINK
-echo ^(GUI Refresh with J-Link selected^), then ST-LINK.
+echo Default is J-Link:  -c port=JLINK ap=1
 pause
 exit /b 0
-
-:detect_probe
-if "%PROBE_FORCED%"=="1" (
-    echo [info] probe forced: %PROBE%
-    exit /b 0
-)
-echo [info] CubeProgrammer J-Link refresh: -c port=JLINK ^(same as GUI Refresh^)
-call :try_cube_jlink
-if not errorlevel 1 (
-    set "PROBE=jlink"
-    set "PORT=JLINK"
-    echo [ok]   CubeProgrammer found J-Link, using port=JLINK
-    exit /b 0
-)
-echo [info] CubeProgrammer did not see J-Link, try SEGGER ShowEmuList
-call :find_jlink_exe
-if not defined JLINK_EXE (
-    echo [info] JLink.exe not found, skip ShowEmuList
-    goto :detect_stlink
-)
-echo [info] %JLINK_EXE%
-set "JL_CMD=%TEMP%\tfm_showemulist.jlink"
-set "JL_LIST=%TEMP%\tfm_jlink_list.txt"
-> "%JL_CMD%" echo ShowEmuList USB
->> "%JL_CMD%" echo q
-"%JLINK_EXE%" -NoGui 1 -AutoConnect 0 -CommandFile "%JL_CMD%" > "%JL_LIST%" 2>&1
-echo ---------- J-Link ShowEmuList ----------
-type "%JL_LIST%"
-echo ----------------------------------------
-findstr /i /c:"No emulators" /c:"0 emulators" /c:"Emulators found: 0" "%JL_LIST%" >nul
-if not errorlevel 1 goto :detect_stlink
-findstr /i /c:"Serial number:" /c:"SerialNumber" /c:"J-Link[" "%JL_LIST%" >nul
-if errorlevel 1 goto :detect_stlink
-set "PROBE=jlink"
-set "PORT=JLINK"
-echo [ok]   SEGGER listed a J-Link, using port=JLINK
-exit /b 0
-
-:detect_stlink
-echo [info] CubeProgrammer/SEGGER did not confirm a J-Link, still using port=JLINK
-echo        Onboard ST-LINK:  tfm_update.bat stlink
-exit /b 0
-
-:add_jlink_path
-for /d %%D in ("%ProgramFiles%\SEGGER\JLink*") do (
-    if exist "%%~D\JLinkARM.dll" set "PATH=%%~D;%PATH%"
-)
-for /d %%D in ("%ProgramFiles(x86)%\SEGGER\JLink*") do (
-    if exist "%%~D\JLinkARM.dll" set "PATH=%%~D;%PATH%"
-)
-exit /b 0
-
-:try_cube_jlink
-set "TRY_OUT=%TEMP%\tfm_cube_jlink.txt"
-echo CMD: STM32_Programmer_CLI -c port=JLINK ap=1 mode=HotPlug
-STM32_Programmer_CLI -c port=JLINK ap=1 mode=HotPlug > "%TRY_OUT%" 2>&1
-echo ---------- CubeProgrammer J-Link ----------
-type "%TRY_OUT%"
-echo -------------------------------------------
-findstr /i /c:"Library not found" /c:"cannot load JLink" "%TRY_OUT%" >nul
-if not errorlevel 1 (
-    echo [info] CubeProgrammer could not load JLinkARM.dll
-    echo        Install SEGGER J-Link, or copy JLinkARM.dll next to STM32_Programmer_CLI.exe
-    exit /b 1
-)
-findstr /i /c:"Connecting to J-Link" /c:"J-Link Probe" /c:"JLINK SN" /c:"J-Link connected" /c:"Device=Cortex" "%TRY_OUT%" >nul
-if not errorlevel 1 exit /b 0
-findstr /i /c:"No debug probe" /c:"No J-Link" /c:"Unknown port" /c:"invalid port" /c:"MCU port name" "%TRY_OUT%" >nul
-if not errorlevel 1 exit /b 1
-exit /b 1
-
-:find_jlink_exe
-set "JLINK_EXE="
-if exist "%ProgramFiles%\SEGGER\JLink\JLink.exe" set "JLINK_EXE=%ProgramFiles%\SEGGER\JLink\JLink.exe"
-for /d %%D in ("%ProgramFiles%\SEGGER\JLink*") do (
-    if exist "%%~D\JLink.exe" set "JLINK_EXE=%%~D\JLink.exe"
-)
-for /d %%D in ("%ProgramFiles(x86)%\SEGGER\JLink*") do (
-    if exist "%%~D\JLink.exe" set "JLINK_EXE=%%~D\JLink.exe"
-)
-if defined JLINK_EXE exit /b 0
-where JLink.exe >nul 2>&1
-if not errorlevel 1 (
-    for /f "delims=" %%I in ('where JLink.exe') do (
-        set "JLINK_EXE=%%I"
-        exit /b 0
-    )
-)
-exit /b 1
 
 :find_file
 set "FILE="
