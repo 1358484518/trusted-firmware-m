@@ -5,13 +5,13 @@ rem  * Wipe protections, erase flash, restore default secure OBs,
 rem  * set BOOT_UBE=0xB4 (OEM-iRoT).
 rem  *
 rem  * Usage:
-rem  *   regression.bat                  auto-detect (J-Link if listed, else ST-LINK)
+rem  *   regression.bat                  auto-detect (CubeProgrammer J-Link, else ST-LINK)
 rem  *   regression.bat <SN>
 rem  *   regression.bat jlink [SN]       force J-Link
 rem  *   regression.bat stlink [SN]      force ST-LINK
 rem  *
-rem  * J-Link uses STM32CubeProgrammer -c port=JLINK (needs CubeProgrammer
-rem  * with J-Link support, plus SEGGER J-Link software).
+rem  * J-Link: STM32_Programmer_CLI -c port=JLINK  (same path as GUI Refresh
+rem  * with the J-Link interface selected). CLI -l does NOT list J-Link.
 rem  *
 rem  * SPDX-License-Identifier: BSD-3-Clause
 rem  ****************************************************************************
@@ -73,7 +73,7 @@ for /f "delims=" %%I in ('where STM32_Programmer_CLI') do (
     goto :cli_found
 )
 :cli_found
-
+call :add_jlink_path
 call :detect_probe
 set "sn_option="
 if defined SN_ARG (
@@ -84,7 +84,7 @@ if defined SN_ARG (
 )
 echo [info] using probe=%PROBE%  port=%PORT%
 if /i "%PROBE%"=="jlink" (
-    echo [info] J-Link via CubeProgrammer. Install SEGGER J-Link + STM32CubeProgrammer.
+    echo [info] J-Link via CubeProgrammer -c port=JLINK
 )
 
 set "connect=-c port=%PORT% ap=1 %sn_option% mode=UR"
@@ -170,7 +170,8 @@ echo   regression.bat ^<SN^>
 echo   regression.bat jlink [SN]
 echo   regression.bat stlink [SN]
 echo.
-echo With no probe name, J-Link is used if SEGGER ShowEmuList finds one.
+echo With no probe name, tries CubeProgrammer -c port=JLINK
+echo ^(GUI Refresh with J-Link selected^), then ST-LINK.
 pause
 exit /b 0
 
@@ -179,10 +180,18 @@ if "%PROBE_FORCED%"=="1" (
     echo [info] probe forced: %PROBE%
     exit /b 0
 )
-echo [info] Refresh J-Link list via SEGGER ShowEmuList
+echo [info] CubeProgrammer J-Link refresh: -c port=JLINK ^(same as GUI Refresh^)
+call :try_cube_jlink
+if not errorlevel 1 (
+    set "PROBE=jlink"
+    set "PORT=JLINK"
+    echo [ok]   CubeProgrammer found J-Link, using port=JLINK
+    exit /b 0
+)
+echo [info] CubeProgrammer did not see J-Link, try SEGGER ShowEmuList
 call :find_jlink_exe
 if not defined JLINK_EXE (
-    echo [info] JLink.exe not found, skip J-Link refresh
+    echo [info] JLink.exe not found, skip ShowEmuList
     goto :detect_stlink
 )
 echo [info] %JLINK_EXE%
@@ -190,7 +199,7 @@ set "JL_CMD=%TEMP%\tfm_showemulist.jlink"
 set "JL_LIST=%TEMP%\tfm_jlink_list.txt"
 > "%JL_CMD%" echo ShowEmuList USB
 >> "%JL_CMD%" echo q
-"%JLINK_EXE%" -NoGui 1 -CommandFile "%JL_CMD%" > "%JL_LIST%" 2>&1
+"%JLINK_EXE%" -NoGui 1 -AutoConnect 0 -CommandFile "%JL_CMD%" > "%JL_LIST%" 2>&1
 echo ---------- J-Link ShowEmuList ----------
 type "%JL_LIST%"
 echo ----------------------------------------
@@ -200,15 +209,44 @@ findstr /i /c:"Serial number:" /c:"SerialNumber" /c:"J-Link[" "%JL_LIST%" >nul
 if errorlevel 1 goto :detect_stlink
 set "PROBE=jlink"
 set "PORT=JLINK"
-echo [ok]   J-Link refreshed and found, using port=JLINK
+echo [ok]   SEGGER listed a J-Link, using port=JLINK
 exit /b 0
 
 :detect_stlink
 set "PROBE=stlink"
 set "PORT=SWD"
-echo [info] No J-Link emulator listed, using ST-LINK port=SWD
-echo        Force with:  regression.bat jlink   or   regression.bat stlink
+echo [info] No J-Link found, using ST-LINK port=SWD
+echo        GUI Refresh finds J-Link only when the J-Link interface is selected.
+echo        CLI equivalent is -c port=JLINK, not -l. Force: regression.bat jlink
 exit /b 0
+
+:add_jlink_path
+for /d %%D in ("%ProgramFiles%\SEGGER\JLink*") do (
+    if exist "%%~D\JLinkARM.dll" set "PATH=%%~D;%PATH%"
+)
+for /d %%D in ("%ProgramFiles(x86)%\SEGGER\JLink*") do (
+    if exist "%%~D\JLinkARM.dll" set "PATH=%%~D;%PATH%"
+)
+exit /b 0
+
+:try_cube_jlink
+set "TRY_OUT=%TEMP%\tfm_cube_jlink.txt"
+echo CMD: STM32_Programmer_CLI -c port=JLINK ap=1 mode=HotPlug
+STM32_Programmer_CLI -c port=JLINK ap=1 mode=HotPlug > "%TRY_OUT%" 2>&1
+echo ---------- CubeProgrammer J-Link ----------
+type "%TRY_OUT%"
+echo -------------------------------------------
+findstr /i /c:"Library not found" /c:"cannot load JLink" "%TRY_OUT%" >nul
+if not errorlevel 1 (
+    echo [info] CubeProgrammer could not load JLinkARM.dll
+    echo        Install SEGGER J-Link, or copy JLinkARM.dll next to STM32_Programmer_CLI.exe
+    exit /b 1
+)
+findstr /i /c:"Connecting to J-Link" /c:"J-Link Probe" /c:"JLINK SN" /c:"J-Link connected" /c:"Device=Cortex" "%TRY_OUT%" >nul
+if not errorlevel 1 exit /b 0
+findstr /i /c:"No debug probe" /c:"No J-Link" /c:"Unknown port" /c:"invalid port" /c:"MCU port name" "%TRY_OUT%" >nul
+if not errorlevel 1 exit /b 1
+exit /b 1
 
 :find_jlink_exe
 set "JLINK_EXE="
