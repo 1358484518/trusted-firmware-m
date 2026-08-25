@@ -294,6 +294,7 @@ if not exist "%HEX_BIN%" (
 set "HEX_LOAD="
 if exist "%HEX_ADDR_FILE%" set /p HEX_LOAD=<"%HEX_ADDR_FILE%"
 echo [info] LOAD %HEX_LOAD%
+echo [info] saved %HEX_BIN%  ^(next run flashes this .bin, skips hex^)
 echo %HEX_LOAD% | findstr /i /c:"0x0C" >nul
 if not errorlevel 1 (
     echo [FAIL] converted address still 0x0C, will not program secure alias
