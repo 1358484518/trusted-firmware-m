@@ -2,26 +2,25 @@
 rem ****************************************************************************
 rem  * STM32H573I-DK TF-M flash after J-Link regression (Windows)
 rem  *
-rem  * 1) Run jlink_regression.bat (option bytes + erase + OEM-iRoT)
-rem  * 2) If present in current dir (or this script's dir), download:
-rem  *      tfm_s_ns_signed.hex     Intel HEX (S+NS, addresses in file)
-rem  *      tfm_ns_signed.bin       binary at 0x0C088000
-rem  *      bl2.hex                 Intel HEX (addresses in file)
+rem  * J-Link programs the 0x08000000 flash window. Hex files that use the
+rem  * secure alias 0x0Cxxxxxx are remapped (0x0C - 0x04000000 = 0x08).
+rem  * Same conversion as TFM_BIN2HEX.sh for drag-and-drop.
 rem  *
-rem  * Usage:
-rem  *   jlink_tfm_update.bat
-rem  *   jlink_tfm_update.bat <J-Link SN>
+rem  * Prefer .bin:
+rem  *   tfm_s_signed.bin       0x08038000
+rem  *   tfm_s_ns_signed.bin    0x08038000  (S+NS, skip extra NS)
+rem  *   tfm_ns_signed.bin      0x08088000
+rem  *   bl2.bin                0x0800E000
 rem  *
-rem  * Always: STM32_Programmer_CLI -c port=JLINK ap=1
 rem  * SPDX-License-Identifier: BSD-3-Clause
 rem  ****************************************************************************
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 
 set "EXIT_CODE=0"
 set "FAILED_STEP="
 set "FLASHED=0"
-set "SCRIPT_REV=cube-jlink-20260825b"
-set "PORT=JLINK"
+set "SKIP_NS=0"
+set "SCRIPT_REV=cube-jlink-20260825c"
 set "SN_ARG="
 
 if /i "%~1"=="-h" goto :usage
@@ -31,10 +30,10 @@ if not "%~1"=="" set "SN_ARG=%~1"
 set "sn_option="
 if defined SN_ARG set "sn_option=sn=%SN_ARG%"
 
-rem H573 flash map (secure alias 0x0C00_0000)
-set "ADDR_BL2=0x0C00E000"
-set "ADDR_S=0x0C038000"
-set "ADDR_NS=0x0C088000"
+rem NS flash alias (J-Link). Secure alias is NS + 0x04000000.
+set "ADDR_BL2=0x0800E000"
+set "ADDR_S=0x08038000"
+set "ADDR_NS=0x08088000"
 
 echo.
 echo ============================================================
@@ -42,6 +41,7 @@ echo  STM32H573I-DK  jlink_tfm_update.bat
 echo  rev:  %SCRIPT_REV%
 echo  file: %~f0
 echo  cwd:  %CD%
+echo  J-Link addresses use 0x08 alias, not 0x0C
 echo ============================================================
 echo.
 
@@ -106,33 +106,18 @@ echo.
 
 set "connect=-c port=JLINK ap=1 %sn_option% mode=UR"
 
-echo [3] Scan images in current directory
+echo [3] Scan images
 set "FOUND_ANY=0"
-call :find_file bl2.hex
-if not errorlevel 1 (
-    echo        FOUND  bl2.hex                 -^> BL2  %ADDR_BL2%  ^(hex uses file addresses^)
-    set "FOUND_ANY=1"
-) else (
-    echo        skip   bl2.hex                 not found
-)
-call :find_file tfm_s_ns_signed.hex
-if not errorlevel 1 (
-    echo        FOUND  tfm_s_ns_signed.hex     -^> S+NS %ADDR_S%    ^(hex uses file addresses^)
-    set "FOUND_ANY=1"
-) else (
-    echo        skip   tfm_s_ns_signed.hex     not found
-)
-call :find_file tfm_ns_signed.bin
-if not errorlevel 1 (
-    echo        FOUND  tfm_ns_signed.bin       -^> NS   %ADDR_NS%
-    set "FOUND_ANY=1"
-) else (
-    echo        skip   tfm_ns_signed.bin       not found
-)
+call :note_file tfm_s_signed.bin      "S     %ADDR_S%"
+call :note_file tfm_s_ns_signed.bin   "S+NS  %ADDR_S%"
+call :note_file tfm_s_ns_signed.hex   "S+NS  hex, remap 0x0C-^>0x08"
+call :note_file tfm_ns_signed.bin     "NS    %ADDR_NS%"
+call :note_file bl2.bin               "BL2   %ADDR_BL2%"
+call :note_file bl2.hex               "BL2   hex, remap 0x0C-^>0x08"
 echo.
 
 if "%FOUND_ANY%"=="0" (
-    echo [FAIL] no bl2.hex / tfm_s_ns_signed.hex / tfm_ns_signed.bin in:
+    echo [FAIL] no TF-M images in:
     echo        %CD%
     echo        %~dp0
     set "FAILED_STEP=no image files"
@@ -140,25 +125,62 @@ if "%FOUND_ANY%"=="0" (
     goto :finish
 )
 
-echo [4] Download images that exist
+echo [4] Download
 echo.
+
+call :find_file tfm_s_signed.bin
+if not errorlevel 1 (
+    call :flash_bin tfm_s_signed.bin "%FILE%" %ADDR_S% "S signed"
+    if errorlevel 1 goto :finish
+    goto :after_s
+)
+
+call :find_file tfm_s_ns_signed.bin
+if not errorlevel 1 (
+    call :flash_bin tfm_s_ns_signed.bin "%FILE%" %ADDR_S% "S+NS signed"
+    if errorlevel 1 goto :finish
+    set "SKIP_NS=1"
+    goto :after_s
+)
 
 call :find_file tfm_s_ns_signed.hex
 if not errorlevel 1 (
     call :flash_hex tfm_s_ns_signed.hex "%FILE%" "S+NS signed"
     if errorlevel 1 goto :finish
+    set "SKIP_NS=1"
+    goto :after_s
+)
+echo [info] no S / S+NS image
+:after_s
+
+if "%SKIP_NS%"=="1" (
+    echo [info] skip tfm_ns_signed.bin, already in concatenated S+NS
+) else (
+    call :find_file tfm_ns_signed.bin
+    if not errorlevel 1 (
+        call :flash_bin tfm_ns_signed.bin "%FILE%" %ADDR_NS% "NS signed"
+        if errorlevel 1 goto :finish
+    )
 )
 
-call :find_file tfm_ns_signed.bin
+call :find_file bl2.bin
 if not errorlevel 1 (
-    call :flash_bin tfm_ns_signed.bin "%FILE%" %ADDR_NS% "NS signed"
+    call :flash_bin bl2.bin "%FILE%" %ADDR_BL2% "BL2"
     if errorlevel 1 goto :finish
+    goto :after_bl2
 )
-
 call :find_file bl2.hex
 if not errorlevel 1 (
     call :flash_hex bl2.hex "%FILE%" "BL2"
     if errorlevel 1 goto :finish
+)
+:after_bl2
+
+if "%FLASHED%"=="0" (
+    echo [FAIL] nothing downloaded
+    set "FAILED_STEP=nothing downloaded"
+    set "EXIT_CODE=1"
+    goto :finish
 )
 
 echo [5] Reset MCU
@@ -182,9 +204,18 @@ goto :finish
 
 :usage
 echo Usage: jlink_tfm_update.bat [J-Link SN]
-echo Always uses CubeProgrammer -c port=JLINK ap=1
-echo Put jlink_regression.bat next to this file, images in cwd.
+echo J-Link uses 0x08 flash alias. Hex 0x0C addresses are remapped.
 pause
+exit /b 0
+
+:note_file
+call :find_file %~1
+if not errorlevel 1 (
+    echo        FOUND  %~1    %~2
+    set "FOUND_ANY=1"
+) else (
+    echo        skip   %~1
+)
 exit /b 0
 
 :find_file
@@ -199,26 +230,41 @@ if exist "%~dp0%~1" (
 )
 exit /b 1
 
+:remap_hex
+set "HEX_OUT=%TEMP%\tfm_jlink_%~n1.hex"
+echo [info] remap hex 0x0Cxxxxxx -^> 0x08xxxxxx
+echo        in  %~2
+echo        out %HEX_OUT%
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0jlink_hex_ns_alias.ps1" -InFile "%~2" -OutFile "%HEX_OUT%"
+if errorlevel 1 (
+    echo [FAIL] hex remap failed, copy jlink_hex_ns_alias.ps1 next to this bat
+    set "FAILED_STEP=remap %~1"
+    set "EXIT_CODE=1"
+    exit /b 1
+)
+if not exist "%HEX_OUT%" (
+    echo [FAIL] remapped hex not created
+    set "FAILED_STEP=remap %~1"
+    set "EXIT_CODE=1"
+    exit /b 1
+)
+exit /b 0
+
 :flash_hex
 set "STEP_NAME=%~1"
 set "STEP_PATH=%~2"
 set "STEP_DESC=%~3"
+call :remap_hex "%STEP_NAME%" "%STEP_PATH%"
+if errorlevel 1 exit /b 1
 echo ------------------------------------------------------------
 echo DOWNLOAD  %STEP_DESC%  [%STEP_NAME%]
-echo FILE: %STEP_PATH%
-echo CMD:  STM32_Programmer_CLI %connect% -d "%STEP_PATH%" -v
+echo FILE: %HEX_OUT%  ^(remapped^)
+echo CMD:  STM32_Programmer_CLI %connect% -d "%HEX_OUT%" -v
 echo ------------------------------------------------------------
-STM32_Programmer_CLI %connect% -d "%STEP_PATH%" -v
-if errorlevel 1 (
-    echo [FAIL] download %STEP_NAME%
-    set "FAILED_STEP=download %STEP_NAME%"
-    set "EXIT_CODE=1"
-    exit /b 1
-)
-echo [ok]   %STEP_NAME% downloaded
-echo.
-set /a FLASHED+=1
-exit /b 0
+STM32_Programmer_CLI %connect% -d "%HEX_OUT%" -v > "%TEMP%\tfm_jlink_dl.txt" 2>&1
+set "DLRC=%ERRORLEVEL%"
+call :check_download
+exit /b %ERRORLEVEL%
 
 :flash_bin
 set "STEP_NAME=%~1"
@@ -231,14 +277,29 @@ echo FILE: %STEP_PATH%
 echo ADDR: %STEP_ADDR%
 echo CMD:  STM32_Programmer_CLI %connect% -d "%STEP_PATH%" %STEP_ADDR% -v
 echo ------------------------------------------------------------
-STM32_Programmer_CLI %connect% -d "%STEP_PATH%" %STEP_ADDR% -v
-if errorlevel 1 (
-    echo [FAIL] download %STEP_NAME%
+STM32_Programmer_CLI %connect% -d "%STEP_PATH%" %STEP_ADDR% -v > "%TEMP%\tfm_jlink_dl.txt" 2>&1
+set "DLRC=%ERRORLEVEL%"
+call :check_download
+exit /b %ERRORLEVEL%
+
+:check_download
+type "%TEMP%\tfm_jlink_dl.txt"
+findstr /i /c:"Data mismatch" /c:"verification failed" /c:"Error: Download" /c:"Error: failed" /c:"No debug probe" /c:"Library not found" "%TEMP%\tfm_jlink_dl.txt" >nul
+if not errorlevel 1 (
+    echo.
+    echo [FAIL] download %STEP_NAME%  ^(CubeProgrammer reported Error^)
     set "FAILED_STEP=download %STEP_NAME%"
     set "EXIT_CODE=1"
     exit /b 1
 )
-echo [ok]   %STEP_NAME% downloaded @ %STEP_ADDR%
+if not "%DLRC%"=="0" (
+    echo.
+    echo [FAIL] download %STEP_NAME%  exit=%DLRC%
+    set "FAILED_STEP=download %STEP_NAME%"
+    set "EXIT_CODE=1"
+    exit /b 1
+)
+echo [ok]   %STEP_NAME% downloaded
 echo.
 set /a FLASHED+=1
 exit /b 0
