@@ -170,7 +170,7 @@ echo   regression.bat ^<SN^>
 echo   regression.bat jlink [SN]
 echo   regression.bat stlink [SN]
 echo.
-echo With no probe name, J-Link is used if CubeProgrammer lists one.
+echo With no probe name, J-Link is used if SEGGER ShowEmuList finds one.
 pause
 exit /b 0
 
@@ -179,21 +179,55 @@ if "%PROBE_FORCED%"=="1" (
     echo [info] probe forced: %PROBE%
     exit /b 0
 )
-echo [info] Auto-detect probe ^(J-Link if listed, else ST-LINK^)
-set "JL_LIST=%TEMP%\tfm_jlink_list.txt"
-STM32_Programmer_CLI -l jlink > "%JL_LIST%" 2>&1
-findstr /i /c:"JLINK Probe" /c:"J-Link Probe" /c:"JLink Probe" "%JL_LIST%" >nul
-if not errorlevel 1 (
-    set "PROBE=jlink"
-    set "PORT=JLINK"
-    echo [ok]   J-Link listed, using port=JLINK
-    exit /b 0
+echo [info] Refresh J-Link list via SEGGER ShowEmuList
+call :find_jlink_exe
+if not defined JLINK_EXE (
+    echo [info] JLink.exe not found, skip J-Link refresh
+    goto :detect_stlink
 )
+echo [info] %JLINK_EXE%
+set "JL_CMD=%TEMP%\tfm_showemulist.jlink"
+set "JL_LIST=%TEMP%\tfm_jlink_list.txt"
+> "%JL_CMD%" echo ShowEmuList USB
+>> "%JL_CMD%" echo q
+"%JLINK_EXE%" -NoGui 1 -CommandFile "%JL_CMD%" > "%JL_LIST%" 2>&1
+echo ---------- J-Link ShowEmuList ----------
+type "%JL_LIST%"
+echo ----------------------------------------
+findstr /i /c:"No emulators" /c:"0 emulators" /c:"Emulators found: 0" "%JL_LIST%" >nul
+if not errorlevel 1 goto :detect_stlink
+findstr /i /c:"Serial number:" /c:"SerialNumber" /c:"J-Link[" "%JL_LIST%" >nul
+if errorlevel 1 goto :detect_stlink
+set "PROBE=jlink"
+set "PORT=JLINK"
+echo [ok]   J-Link refreshed and found, using port=JLINK
+exit /b 0
+
+:detect_stlink
 set "PROBE=stlink"
 set "PORT=SWD"
-echo [info] No J-Link listed, using ST-LINK port=SWD
+echo [info] No J-Link emulator listed, using ST-LINK port=SWD
 echo        Force with:  regression.bat jlink   or   regression.bat stlink
 exit /b 0
+
+:find_jlink_exe
+set "JLINK_EXE="
+if exist "%ProgramFiles%\SEGGER\JLink\JLink.exe" set "JLINK_EXE=%ProgramFiles%\SEGGER\JLink\JLink.exe"
+for /d %%D in ("%ProgramFiles%\SEGGER\JLink*") do (
+    if exist "%%~D\JLink.exe" set "JLINK_EXE=%%~D\JLink.exe"
+)
+for /d %%D in ("%ProgramFiles(x86)%\SEGGER\JLink*") do (
+    if exist "%%~D\JLink.exe" set "JLINK_EXE=%%~D\JLink.exe"
+)
+if defined JLINK_EXE exit /b 0
+where JLink.exe >nul 2>&1
+if not errorlevel 1 (
+    for /f "delims=" %%I in ('where JLink.exe') do (
+        set "JLINK_EXE=%%I"
+        exit /b 0
+    )
+)
+exit /b 1
 
 :run_cli
 echo ------------------------------------------------------------
