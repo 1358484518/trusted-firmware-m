@@ -9,10 +9,9 @@ rem  *      tfm_s_ns_signed.hex     Intel HEX, S+NS concatenated (S slot)
 rem  *      tfm_ns_signed.bin       binary at 0x0C088000 (NS primary)
 rem  *
 rem  * Usage:
-rem  *   tfm_update.bat
+rem  *   tfm_update.bat                  auto-detect (J-Link if listed, else ST-LINK)
 rem  *   tfm_update.bat <SN>
-rem  *   tfm_update.bat jlink
-rem  *   tfm_update.bat jlink <SN>
+rem  *   tfm_update.bat jlink [SN]
 rem  *   tfm_update.bat stlink [SN]
 rem  *
 rem  * SPDX-License-Identifier: BSD-3-Clause
@@ -25,14 +24,17 @@ set "FLASHED=0"
 set "PROBE=stlink"
 set "PORT=SWD"
 set "SN_ARG="
+set "PROBE_FORCED=0"
 
 if /i "%~1"=="jlink" (
     set "PROBE=jlink"
     set "PORT=JLINK"
+    set "PROBE_FORCED=1"
     if not "%~2"=="" set "SN_ARG=%~2"
 ) else if /i "%~1"=="stlink" (
     set "PROBE=stlink"
     set "PORT=SWD"
+    set "PROBE_FORCED=1"
     if not "%~2"=="" set "SN_ARG=%~2"
 ) else if /i "%~1"=="-h" (
     goto :usage
@@ -53,7 +55,6 @@ set "ADDR_NS=0x0C088000"
 echo.
 echo ============================================================
 echo  STM32H573I-DK  TF-M UPDATE
-echo  probe: %PROBE%   port: %PORT%
 echo  cwd: %CD%
 echo ============================================================
 echo.
@@ -65,26 +66,7 @@ if not exist "%~dp0regression.bat" (
     goto :finish
 )
 
-echo [1] Run regression.bat  (probe=%PROBE%)
-echo ------------------------------------------------------------
-set "TFM_SKIP_PAUSE=1"
-if defined SN_ARG (
-    call "%~dp0regression.bat" %PROBE% %SN_ARG%
-) else (
-    call "%~dp0regression.bat" %PROBE%
-)
-set "TFM_SKIP_PAUSE="
-if errorlevel 1 (
-    echo.
-    echo [FAIL] regression.bat failed, skip download
-    set "FAILED_STEP=regression.bat"
-    set "EXIT_CODE=1"
-    goto :finish
-)
-echo [ok]   regression finished
-echo.
-
-echo [2] Locate STM32_Programmer_CLI
+echo [1] Locate STM32_Programmer_CLI
 set "CUBEPROG="
 if exist "%ProgramFiles%\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe" (
     set "CUBEPROG=%ProgramFiles%\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin"
@@ -101,6 +83,35 @@ if errorlevel 1 (
     goto :finish
 )
 echo [ok]   STM32_Programmer_CLI ready
+call :detect_probe
+echo [info] using probe=%PROBE%  port=%PORT%
+echo.
+
+echo [2] Run regression.bat
+echo ------------------------------------------------------------
+set "TFM_SKIP_PAUSE=1"
+if "%PROBE_FORCED%"=="1" (
+    if defined SN_ARG (
+        call "%~dp0regression.bat" %PROBE% %SN_ARG%
+    ) else (
+        call "%~dp0regression.bat" %PROBE%
+    )
+) else (
+    if defined SN_ARG (
+        call "%~dp0regression.bat" %SN_ARG%
+    ) else (
+        call "%~dp0regression.bat"
+    )
+)
+set "TFM_SKIP_PAUSE="
+if errorlevel 1 (
+    echo.
+    echo [FAIL] regression.bat failed, skip download
+    set "FAILED_STEP=regression.bat"
+    set "EXIT_CODE=1"
+    goto :finish
+)
+echo [ok]   regression finished
 echo.
 
 set "connect=-c port=%PORT% ap=1 %sn_option% mode=UR"
@@ -183,10 +194,32 @@ goto :finish
 echo Usage:
 echo   tfm_update.bat
 echo   tfm_update.bat ^<SN^>
-echo   tfm_update.bat jlink
-echo   tfm_update.bat jlink ^<SN^>
+echo   tfm_update.bat jlink [SN]
 echo   tfm_update.bat stlink [SN]
+echo.
+echo With no probe name, J-Link is used if CubeProgrammer lists one.
 pause
+exit /b 0
+
+:detect_probe
+if "%PROBE_FORCED%"=="1" (
+    echo [info] probe forced: %PROBE%
+    exit /b 0
+)
+echo [info] Auto-detect probe ^(J-Link if listed, else ST-LINK^)
+set "JL_LIST=%TEMP%\tfm_jlink_list.txt"
+STM32_Programmer_CLI -l jlink > "%JL_LIST%" 2>&1
+findstr /i /c:"JLINK Probe" /c:"J-Link Probe" /c:"JLink Probe" "%JL_LIST%" >nul
+if not errorlevel 1 (
+    set "PROBE=jlink"
+    set "PORT=JLINK"
+    echo [ok]   J-Link listed, using port=JLINK
+    exit /b 0
+)
+set "PROBE=stlink"
+set "PORT=SWD"
+echo [info] No J-Link listed, using ST-LINK port=SWD
+echo        Force with:  tfm_update.bat jlink   or   tfm_update.bat stlink
 exit /b 0
 
 :find_file

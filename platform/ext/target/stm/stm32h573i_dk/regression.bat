@@ -5,11 +5,10 @@ rem  * Wipe protections, erase flash, restore default secure OBs,
 rem  * set BOOT_UBE=0xB4 (OEM-iRoT).
 rem  *
 rem  * Usage:
-rem  *   regression.bat                  ST-LINK (default)
+rem  *   regression.bat                  auto-detect (J-Link if listed, else ST-LINK)
 rem  *   regression.bat <SN>
-rem  *   regression.bat jlink
-rem  *   regression.bat jlink <SN>
-rem  *   regression.bat stlink [SN]
+rem  *   regression.bat jlink [SN]       force J-Link
+rem  *   regression.bat stlink [SN]      force ST-LINK
 rem  *
 rem  * J-Link uses STM32CubeProgrammer -c port=JLINK (needs CubeProgrammer
 rem  * with J-Link support, plus SEGGER J-Link software).
@@ -22,14 +21,17 @@ set "EXIT_CODE=0"
 set "PROBE=stlink"
 set "PORT=SWD"
 set "SN_ARG="
+set "PROBE_FORCED=0"
 
 if /i "%~1"=="jlink" (
     set "PROBE=jlink"
     set "PORT=JLINK"
+    set "PROBE_FORCED=1"
     if not "%~2"=="" set "SN_ARG=%~2"
 ) else if /i "%~1"=="stlink" (
     set "PROBE=stlink"
     set "PORT=SWD"
+    set "PROBE_FORCED=1"
     if not "%~2"=="" set "SN_ARG=%~2"
 ) else if /i "%~1"=="-h" (
     goto :usage
@@ -42,20 +44,8 @@ if /i "%~1"=="jlink" (
 echo.
 echo ============================================================
 echo  STM32H573I-DK  regression  (OEM-iRoT)
-echo  probe: %PROBE%   port: %PORT%
 echo ============================================================
 echo.
-
-set "sn_option="
-if defined SN_ARG (
-    set "sn_option=sn=%SN_ARG%"
-    echo [info] probe SN = %SN_ARG%
-) else (
-    echo [info] probe SN not specified, use the first probe
-)
-if /i "%PROBE%"=="jlink" (
-    echo [info] J-Link via CubeProgrammer. Install SEGGER J-Link + STM32CubeProgrammer.
-)
 
 echo.
 echo [1/8] Locate STM32_Programmer_CLI
@@ -83,6 +73,19 @@ for /f "delims=" %%I in ('where STM32_Programmer_CLI') do (
     goto :cli_found
 )
 :cli_found
+
+call :detect_probe
+set "sn_option="
+if defined SN_ARG (
+    set "sn_option=sn=%SN_ARG%"
+    echo [info] probe SN = %SN_ARG%
+) else (
+    echo [info] probe SN not specified, use the first probe
+)
+echo [info] using probe=%PROBE%  port=%PORT%
+if /i "%PROBE%"=="jlink" (
+    echo [info] J-Link via CubeProgrammer. Install SEGGER J-Link + STM32CubeProgrammer.
+)
 
 set "connect=-c port=%PORT% ap=1 %sn_option% mode=UR"
 set "connect_no_reset=-c port=%PORT% ap=1 %sn_option% mode=HotPlug"
@@ -164,10 +167,32 @@ goto :finish
 echo Usage:
 echo   regression.bat
 echo   regression.bat ^<SN^>
-echo   regression.bat jlink
-echo   regression.bat jlink ^<SN^>
+echo   regression.bat jlink [SN]
 echo   regression.bat stlink [SN]
+echo.
+echo With no probe name, J-Link is used if CubeProgrammer lists one.
 pause
+exit /b 0
+
+:detect_probe
+if "%PROBE_FORCED%"=="1" (
+    echo [info] probe forced: %PROBE%
+    exit /b 0
+)
+echo [info] Auto-detect probe ^(J-Link if listed, else ST-LINK^)
+set "JL_LIST=%TEMP%\tfm_jlink_list.txt"
+STM32_Programmer_CLI -l jlink > "%JL_LIST%" 2>&1
+findstr /i /c:"JLINK Probe" /c:"J-Link Probe" /c:"JLink Probe" "%JL_LIST%" >nul
+if not errorlevel 1 (
+    set "PROBE=jlink"
+    set "PORT=JLINK"
+    echo [ok]   J-Link listed, using port=JLINK
+    exit /b 0
+)
+set "PROBE=stlink"
+set "PORT=SWD"
+echo [info] No J-Link listed, using ST-LINK port=SWD
+echo        Force with:  regression.bat jlink   or   regression.bat stlink
 exit /b 0
 
 :run_cli
