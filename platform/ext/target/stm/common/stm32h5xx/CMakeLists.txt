@@ -215,6 +215,7 @@ else()
 endif()
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../platform/ext/target/stm/stm32h573i_dk/regression.sh
+         ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../platform/ext/target/stm/stm32h573i_dk/regression.bat
          ${PREPROCESSOR_FILE}
          ${STM_COMMON_DIR}/scripts/TFM_UPDATE.sh
          ${STM_COMMON_DIR}/scripts/TFM_BIN2HEX.sh
