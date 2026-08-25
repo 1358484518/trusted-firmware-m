@@ -9,10 +9,10 @@ rem  *      tfm_s_ns_signed.hex     Intel HEX, S+NS concatenated (S slot)
 rem  *      tfm_ns_signed.bin       binary at 0x0C088000 (NS primary)
 rem  *
 rem  * Usage:
-rem  *   tfm_update.bat                  auto-detect (CubeProgrammer J-Link, else ST-LINK)
+rem  *   tfm_update.bat                  J-Link (CubeProgrammer -c port=JLINK)
 rem  *   tfm_update.bat <SN>
 rem  *   tfm_update.bat jlink [SN]
-rem  *   tfm_update.bat stlink [SN]
+rem  *   tfm_update.bat stlink [SN]      onboard ST-LINK
 rem  *
 rem  * SPDX-License-Identifier: BSD-3-Clause
 rem  ****************************************************************************
@@ -21,8 +21,9 @@ setlocal EnableExtensions
 set "EXIT_CODE=0"
 set "FAILED_STEP="
 set "FLASHED=0"
-set "PROBE=stlink"
-set "PORT=SWD"
+set "SCRIPT_REV=cube-jlink-20260825"
+set "PROBE=jlink"
+set "PORT=JLINK"
 set "SN_ARG="
 set "PROBE_FORCED=0"
 
@@ -55,7 +56,9 @@ set "ADDR_NS=0x0C088000"
 echo.
 echo ============================================================
 echo  STM32H573I-DK  TF-M UPDATE
-echo  cwd: %CD%
+echo  rev:  %SCRIPT_REV%
+echo  file: %~f0
+echo  cwd:  %CD%
 echo ============================================================
 echo.
 
@@ -68,7 +71,10 @@ if not exist "%~dp0regression.bat" (
 
 echo [1] Locate STM32_Programmer_CLI
 set "CUBEPROG="
-if exist "%ProgramFiles%\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe" (
+if exist "D:\ST\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe" (
+    set "CUBEPROG=D:\ST\STM32CubeProgrammer\bin"
+)
+if not defined CUBEPROG if exist "%ProgramFiles%\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe" (
     set "CUBEPROG=%ProgramFiles%\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin"
 )
 if not defined CUBEPROG if exist "%ProgramFiles(x86)%\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe" (
@@ -241,11 +247,8 @@ echo [ok]   SEGGER listed a J-Link, using port=JLINK
 exit /b 0
 
 :detect_stlink
-set "PROBE=stlink"
-set "PORT=SWD"
-echo [info] No J-Link found, using ST-LINK port=SWD
-echo        GUI Refresh finds J-Link only when the J-Link interface is selected.
-echo        CLI equivalent is -c port=JLINK, not -l. Force: tfm_update.bat jlink
+echo [info] CubeProgrammer/SEGGER did not confirm a J-Link, still using port=JLINK
+echo        Onboard ST-LINK:  tfm_update.bat stlink
 exit /b 0
 
 :add_jlink_path

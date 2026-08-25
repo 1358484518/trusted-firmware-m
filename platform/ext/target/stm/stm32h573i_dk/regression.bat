@@ -5,10 +5,10 @@ rem  * Wipe protections, erase flash, restore default secure OBs,
 rem  * set BOOT_UBE=0xB4 (OEM-iRoT).
 rem  *
 rem  * Usage:
-rem  *   regression.bat                  auto-detect (CubeProgrammer J-Link, else ST-LINK)
+rem  *   regression.bat                  J-Link (CubeProgrammer -c port=JLINK)
 rem  *   regression.bat <SN>
 rem  *   regression.bat jlink [SN]       force J-Link
-rem  *   regression.bat stlink [SN]      force ST-LINK
+rem  *   regression.bat stlink [SN]      onboard ST-LINK
 rem  *
 rem  * J-Link: STM32_Programmer_CLI -c port=JLINK  (same path as GUI Refresh
 rem  * with the J-Link interface selected). CLI -l does NOT list J-Link.
@@ -18,8 +18,9 @@ rem  ***************************************************************************
 setlocal EnableExtensions
 set "FAILED_STEP="
 set "EXIT_CODE=0"
-set "PROBE=stlink"
-set "PORT=SWD"
+set "SCRIPT_REV=cube-jlink-20260825"
+set "PROBE=jlink"
+set "PORT=JLINK"
 set "SN_ARG="
 set "PROBE_FORCED=0"
 
@@ -44,13 +45,18 @@ if /i "%~1"=="jlink" (
 echo.
 echo ============================================================
 echo  STM32H573I-DK  regression  (OEM-iRoT)
+echo  rev:  %SCRIPT_REV%
+echo  file: %~f0
 echo ============================================================
 echo.
 
 echo.
 echo [1/8] Locate STM32_Programmer_CLI
 set "CUBEPROG="
-if exist "%ProgramFiles%\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe" (
+if exist "D:\ST\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe" (
+    set "CUBEPROG=D:\ST\STM32CubeProgrammer\bin"
+)
+if not defined CUBEPROG if exist "%ProgramFiles%\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe" (
     set "CUBEPROG=%ProgramFiles%\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin"
 )
 if not defined CUBEPROG if exist "%ProgramFiles(x86)%\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe" (
@@ -213,11 +219,9 @@ echo [ok]   SEGGER listed a J-Link, using port=JLINK
 exit /b 0
 
 :detect_stlink
-set "PROBE=stlink"
-set "PORT=SWD"
-echo [info] No J-Link found, using ST-LINK port=SWD
-echo        GUI Refresh finds J-Link only when the J-Link interface is selected.
-echo        CLI equivalent is -c port=JLINK, not -l. Force: regression.bat jlink
+rem Default is J-Link. Do not silently fall back to ST-LINK.
+echo [info] CubeProgrammer/SEGGER did not confirm a J-Link, still using port=JLINK
+echo        Onboard ST-LINK:  regression.bat stlink
 exit /b 0
 
 :add_jlink_path
