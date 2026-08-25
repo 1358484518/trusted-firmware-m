@@ -155,8 +155,15 @@ if not "%EXIT_CODE%"=="0" (
     echo  Window stays open so you can read the log above.
     echo ============================================================
 ) else (
-    echo Window stays open. Press any key to close.
+    echo ============================================================
+    echo  regression Done
+    echo ============================================================
 )
 echo.
+if /i "%TFM_SKIP_PAUSE%"=="1" (
+    echo [info] pause skipped, returning to caller
+    endlocal & exit /b %EXIT_CODE%
+)
+echo Window stays open. Press any key to close.
 pause
 endlocal & exit /b %EXIT_CODE%
