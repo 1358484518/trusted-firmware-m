@@ -5,13 +5,15 @@ rem  *
 rem  * 1) Run regression.bat (option bytes + erase + OEM-iRoT)
 rem  * 2) If present in current dir (or this script's dir), download:
 rem  *      bl2.hex                 Intel HEX, address inside the file
-rem  *                              (BL2 bin at 0x0C00E000 / hex often 0x0800E000)
 rem  *      tfm_s_ns_signed.hex     Intel HEX, S+NS concatenated (S slot)
 rem  *      tfm_ns_signed.bin       binary at 0x0C088000 (NS primary)
 rem  *
 rem  * Usage:
 rem  *   tfm_update.bat
-rem  *   tfm_update.bat <ST-LINK SN>
+rem  *   tfm_update.bat <SN>
+rem  *   tfm_update.bat jlink
+rem  *   tfm_update.bat jlink <SN>
+rem  *   tfm_update.bat stlink [SN]
 rem  *
 rem  * SPDX-License-Identifier: BSD-3-Clause
 rem  ****************************************************************************
@@ -20,12 +22,28 @@ setlocal EnableExtensions
 set "EXIT_CODE=0"
 set "FAILED_STEP="
 set "FLASHED=0"
-set "sn_option="
+set "PROBE=stlink"
+set "PORT=SWD"
 set "SN_ARG="
-if not "%~1"=="" (
-    set "sn_option=sn=%~1"
+
+if /i "%~1"=="jlink" (
+    set "PROBE=jlink"
+    set "PORT=JLINK"
+    if not "%~2"=="" set "SN_ARG=%~2"
+) else if /i "%~1"=="stlink" (
+    set "PROBE=stlink"
+    set "PORT=SWD"
+    if not "%~2"=="" set "SN_ARG=%~2"
+) else if /i "%~1"=="-h" (
+    goto :usage
+) else if /i "%~1"=="/?" (
+    goto :usage
+) else if not "%~1"=="" (
     set "SN_ARG=%~1"
 )
+
+set "sn_option="
+if defined SN_ARG set "sn_option=sn=%SN_ARG%"
 
 rem H573 flash map (secure alias 0x0C00_0000)
 set "ADDR_BL2=0x0C00E000"
@@ -35,6 +53,7 @@ set "ADDR_NS=0x0C088000"
 echo.
 echo ============================================================
 echo  STM32H573I-DK  TF-M UPDATE
+echo  probe: %PROBE%   port: %PORT%
 echo  cwd: %CD%
 echo ============================================================
 echo.
@@ -46,13 +65,13 @@ if not exist "%~dp0regression.bat" (
     goto :finish
 )
 
-echo [1] Run regression.bat
+echo [1] Run regression.bat  (probe=%PROBE%)
 echo ------------------------------------------------------------
 set "TFM_SKIP_PAUSE=1"
 if defined SN_ARG (
-    call "%~dp0regression.bat" %SN_ARG%
+    call "%~dp0regression.bat" %PROBE% %SN_ARG%
 ) else (
-    call "%~dp0regression.bat"
+    call "%~dp0regression.bat" %PROBE%
 )
 set "TFM_SKIP_PAUSE="
 if errorlevel 1 (
@@ -84,7 +103,7 @@ if errorlevel 1 (
 echo [ok]   STM32_Programmer_CLI ready
 echo.
 
-set "connect=-c port=SWD ap=1 %sn_option% mode=UR"
+set "connect=-c port=%PORT% ap=1 %sn_option% mode=UR"
 
 echo [3] Scan images in current directory
 set "FOUND_ANY=0"
@@ -156,9 +175,19 @@ echo [ok]   reset done
 echo.
 
 echo ============================================================
-echo  ALL STEPS OK  ^(%FLASHED% file(s) downloaded^)
+echo  ALL STEPS OK  ^(%FLASHED% file(s) downloaded^)  probe=%PROBE%
 echo ============================================================
 goto :finish
+
+:usage
+echo Usage:
+echo   tfm_update.bat
+echo   tfm_update.bat ^<SN^>
+echo   tfm_update.bat jlink
+echo   tfm_update.bat jlink ^<SN^>
+echo   tfm_update.bat stlink [SN]
+pause
+exit /b 0
 
 :find_file
 set "FILE="

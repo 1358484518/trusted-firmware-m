@@ -5,27 +5,56 @@ rem  * Wipe protections, erase flash, restore default secure OBs,
 rem  * set BOOT_UBE=0xB4 (OEM-iRoT).
 rem  *
 rem  * Usage:
-rem  *   regression.bat              first ST-LINK
-rem  *   regression.bat <SN>         specific probe
+rem  *   regression.bat                  ST-LINK (default)
+rem  *   regression.bat <SN>
+rem  *   regression.bat jlink
+rem  *   regression.bat jlink <SN>
+rem  *   regression.bat stlink [SN]
+rem  *
+rem  * J-Link uses STM32CubeProgrammer -c port=JLINK (needs CubeProgrammer
+rem  * with J-Link support, plus SEGGER J-Link software).
 rem  *
 rem  * SPDX-License-Identifier: BSD-3-Clause
 rem  ****************************************************************************
 setlocal EnableExtensions
 set "FAILED_STEP="
 set "EXIT_CODE=0"
+set "PROBE=stlink"
+set "PORT=SWD"
+set "SN_ARG="
+
+if /i "%~1"=="jlink" (
+    set "PROBE=jlink"
+    set "PORT=JLINK"
+    if not "%~2"=="" set "SN_ARG=%~2"
+) else if /i "%~1"=="stlink" (
+    set "PROBE=stlink"
+    set "PORT=SWD"
+    if not "%~2"=="" set "SN_ARG=%~2"
+) else if /i "%~1"=="-h" (
+    goto :usage
+) else if /i "%~1"=="/?" (
+    goto :usage
+) else if not "%~1"=="" (
+    set "SN_ARG=%~1"
+)
 
 echo.
 echo ============================================================
 echo  STM32H573I-DK  regression  (OEM-iRoT)
+echo  probe: %PROBE%   port: %PORT%
 echo ============================================================
 echo.
 
 set "sn_option="
-if not "%~1"=="" (
-    set "sn_option=sn=%~1"
-    echo [info] ST-LINK SN = %~1
+if defined SN_ARG (
+    set "sn_option=sn=%SN_ARG%"
+    echo [info] probe SN = %SN_ARG%
 ) else (
-    echo [info] ST-LINK SN not specified, use the first probe
+    echo [info] probe SN not specified, use the first probe
+)
+if /i "%PROBE%"=="jlink" (
+    echo [info] J-Link via CubeProgrammer. Install SEGGER J-Link + STM32CubeProgrammer.
 )
 
 echo.
@@ -55,8 +84,8 @@ for /f "delims=" %%I in ('where STM32_Programmer_CLI') do (
 )
 :cli_found
 
-set "connect=-c port=SWD ap=1 %sn_option% mode=UR"
-set "connect_no_reset=-c port=SWD ap=1 %sn_option% mode=HotPlug"
+set "connect=-c port=%PORT% ap=1 %sn_option% mode=UR"
+set "connect_no_reset=-c port=%PORT% ap=1 %sn_option% mode=HotPlug"
 set "product_state=-ob PRODUCT_STATE=0xED TZEN=0xB4"
 set "remove_bank1_protect=-ob SECWM1_STRT=127 SECWM1_END=0 WRPSGn1=0xffffffff"
 set "remove_bank2_protect=-ob SECWM2_STRT=127 SECWM2_END=0 WRPSGn2=0xffffffff"
@@ -127,8 +156,19 @@ echo.
 echo ============================================================
 echo  ALL STEPS OK
 echo  OEM-iRoT: BOOT_UBE=0xB4  SECBOOTADD=0xC0100  TZEN=0xB4
+echo  probe: %PROBE%
 echo ============================================================
 goto :finish
+
+:usage
+echo Usage:
+echo   regression.bat
+echo   regression.bat ^<SN^>
+echo   regression.bat jlink
+echo   regression.bat jlink ^<SN^>
+echo   regression.bat stlink [SN]
+pause
+exit /b 0
 
 :run_cli
 echo ------------------------------------------------------------
