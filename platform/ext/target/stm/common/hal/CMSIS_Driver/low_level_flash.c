@@ -923,7 +923,7 @@ __attribute__((always_inline)) __STATIC_INLINE uint32_t __get_LR(void)
 /**/
 #endif /*__ARMCC_VERSION */
 
-#if defined (STM32H573xx)
+#if defined (STM32H573xx) || defined(STM32H5F4xx)
 void NMI_Handler(void)
 {
   if (__HAL_FLASH_GET_FLAG(FLASH_FLAG_ECCD))
@@ -997,4 +997,4 @@ void NMI_Handler(void)
     while (1U);
   }
 }
-#endif /*STM32H573xx*/
+#endif /* STM32H573xx || STM32H5F4xx */

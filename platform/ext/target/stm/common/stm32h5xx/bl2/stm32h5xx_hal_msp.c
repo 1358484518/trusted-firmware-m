@@ -177,7 +177,9 @@ const RCC_PeriphCLKInitTypeDef  PeriphClkInitStruct_RTC =
 #if defined(CEC)
     .CecClockSelection = 0,
 #endif /* CEC */
+#if defined(USB_DRD_FS)
     .UsbClockSelection = 0,
+#endif /* USB_DRD_FS */
     .TimPresSelection = 0
 };
 /**
