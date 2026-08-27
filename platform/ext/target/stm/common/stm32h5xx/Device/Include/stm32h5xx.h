@@ -117,7 +117,7 @@
 #elif defined(STM32H5E4xx)
   #include "stm32h5e4xx.h"
 #elif defined(STM32H573xx)
-  #include "stm32h573xx.h"
+  #include "stm32h5f4xx.h"
 #elif defined(STM32H563xx)
   #include "stm32h563xx.h"
 #elif defined(STM32H562xx)
