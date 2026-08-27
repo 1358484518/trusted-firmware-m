@@ -52,7 +52,11 @@ extern volatile uint32_t uFlowStage;
 /* DUAL BANK page size */
 #define PAGE_SIZE FLASH_AREA_IMAGE_SECTOR_SIZE
 
-#define PAGE_MAX_NUMBER_IN_BANK 0x7F
+#if defined(STM32H5F4xx) || defined(STM32H5F5xx) || defined(STM32H5E4xx) || defined(STM32H5E5xx)
+#define PAGE_MAX_NUMBER_IN_BANK 0xFF  /* 256 x 8 KB = 2 MB per bank */
+#else
+#define PAGE_MAX_NUMBER_IN_BANK 0x7F  /* 128 x 8 KB = 1 MB per bank */
+#endif
 
 /* TFM_Boot Vector Address  */
 #define TFM_BOOT_VTOR_ADDR ((uint32_t)(BL2_CODE_START))
