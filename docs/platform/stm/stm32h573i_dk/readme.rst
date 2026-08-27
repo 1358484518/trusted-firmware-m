@@ -53,6 +53,33 @@ Configuration and Build
 GNUARM/ARMCLANG/IARARM compilation is available for this target.
 and build the selected configuration as follow.
 
+Hardware FPU is enabled by default (``CONFIG_TFM_ENABLE_FP=ON``,
+``-mfloat-abi=hard -mfpu=fpv5-sp-d16``). SPE and NSPE must use the same
+FP ABI. Rebuild the SPE after this option changes so NSACR/CP10/CP11 and
+FPU context switching stay consistent.
+
+Ubuntu 22.04 GNUARM one-command build (regression tests)
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+Do not use the distro ``gcc-arm-none-eabi`` package. TF-M rejects some
+Ubuntu compiler version strings. Install the official Arm GNU Toolchain
+13.3.Rel1 and host packages, then build SPE+NS regression tests:
+
+.. code-block:: bash
+
+    ./scripts/setup_ubuntu2204.sh
+    export PATH="$HOME/toolchains/arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi/bin:$PATH"
+    ./buildtfm.sh test
+
+``./buildtfm.sh test`` sets ``TEST_S=ON`` and ``TEST_NS=ON`` (Isolation
+Level 1, PSA API). Artifacts:
+
+- ``build_s/api_ns/bin/bl2.bin``
+- ``build_s/api_ns/bin/tfm_s_signed.bin``
+- ``build_ns/bin/tfm_ns_signed.bin`` (NS regression image, ``0x0C088000``)
+
+``./buildtfm.sh prod`` keeps NS tests but omits Secure test partitions.
+
 The build configuration for TF-M is provided to the build system using command
 line arguments. Required arguments are noted below.
 
