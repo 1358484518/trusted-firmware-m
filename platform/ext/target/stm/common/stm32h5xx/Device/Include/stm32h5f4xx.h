@@ -439,7 +439,11 @@ typedef struct
   __IO uint32_t CR;               /*!< HASH control register,          Address offset: 0x00        */
   __IO uint32_t DIN;              /*!< HASH data input register,       Address offset: 0x04        */
   __IO uint32_t STR;              /*!< HASH start register,            Address offset: 0x08        */
-  __IO uint32_t HRA[5];           /*!< HASH digest registers,          Address offset: 0x0C-0x1C   */
+  /* Cube names this HRA[5]; some HASH HAL still reads Instance->HR[]. */
+  union {
+    __IO uint32_t HRA[5];         /*!< HASH digest registers,          Address offset: 0x0C-0x1C   */
+    __IO uint32_t HR[5];
+  };
   __IO uint32_t IMR;              /*!< HASH interrupt enable register, Address offset: 0x20        */
   __IO uint32_t SR;               /*!< HASH status register,           Address offset: 0x24        */
        uint32_t RESERVED[52];     /*!< Reserved, 0x28-0xF4                                         */
@@ -1076,8 +1080,15 @@ typedef struct
 
   __IO uint32_t SECWM1R_CUR;     /*!< FLASH secure watermark 1 current register,                         Address offset: 0xE0 */
   __IO uint32_t SECWM1R_PRG;     /*!< FLASH secure watermark 1 to program register,                      Address offset: 0xE4 */
-  __IO uint32_t WRP11R_CUR;      /*!< FLASH write sector group protection current register for bank1,    Address offset: 0xE8 */
-  __IO uint32_t WRP11R_PRG;      /*!< FLASH write sector group protection to program register for bank1, Address offset: 0xEC */
+  /* Cube names these WRP11R_*; older HAL still uses WRP1R_* at the same offset. */
+  union {
+    __IO uint32_t WRP11R_CUR;    /*!< FLASH write sector group protection current register for bank1,    Address offset: 0xE8 */
+    __IO uint32_t WRP1R_CUR;
+  };
+  union {
+    __IO uint32_t WRP11R_PRG;    /*!< FLASH write sector group protection to program register for bank1, Address offset: 0xEC */
+    __IO uint32_t WRP1R_PRG;
+  };
   __IO uint32_t EDATA1R_CUR;     /*!< FLASH data sectors configuration current register for bank1,       Address offset: 0xF0 */
   __IO uint32_t EDATA1R_PRG;     /*!< FLASH data sectors configuration to program register for bank1,    Address offset: 0xF4 */
   __IO uint32_t HDP1R_CUR;       /*!< FLASH HDP configuration current register for bank1,                Address offset: 0xF8 */
@@ -1106,8 +1117,15 @@ typedef struct
   __IO uint32_t PRIVBB2R8;       /*!< FLASH privilege block-based bank 2 register 8,                     Address offset: 0x1DC */
   __IO uint32_t SECWM2R_CUR;     /*!< FLASH secure watermark 2 current register,                         Address offset: 0x1E0 */
   __IO uint32_t SECWM2R_PRG;     /*!< FLASH secure watermark 2 to program register,                      Address offset: 0x1E4 */
-  __IO uint32_t WRP21R_CUR;       /*!< FLASH write sector group protection current register for bank2,    Address offset: 0x1E8 */
-  __IO uint32_t WRP21R_PRG;       /*!< FLASH write sector group protection to program register for bank2, Address offset: 0x1EC */
+  /* Cube names these WRP21R_*; older HAL still uses WRP2R_* at the same offset. */
+  union {
+    __IO uint32_t WRP21R_CUR;     /*!< FLASH write sector group protection current register for bank2,    Address offset: 0x1E8 */
+    __IO uint32_t WRP2R_CUR;
+  };
+  union {
+    __IO uint32_t WRP21R_PRG;     /*!< FLASH write sector group protection to program register for bank2, Address offset: 0x1EC */
+    __IO uint32_t WRP2R_PRG;
+  };
   __IO uint32_t EDATA2R_CUR;     /*!< FLASH data sectors configuration current register for bank2,       Address offset: 0x1F0 */
   __IO uint32_t EDATA2R_PRG;     /*!< FLASH data sectors configuration to program register for bank2,    Address offset: 0x1F4 */
   __IO uint32_t HDP2R_CUR;       /*!< FLASH HDP configuration current register for bank2,                Address offset: 0x1F8 */
