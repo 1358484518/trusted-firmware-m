@@ -206,7 +206,11 @@ HAL_StatusTypeDef HAL_RNG_Init(RNG_HandleTypeDef *hrng)
 #endif /* RNG_CR_NIST_VALUE */
 #if defined(RNG_HTCR_NIST_VALUE)
   /* Recommended value for NIST compliance, refer to application note AN4230 */
+#if defined(RNG_HTCR3_HTCFG)
+  WRITE_REG(hrng->Instance->HTCR[0], RNG_HTCR_NIST_VALUE);
+#else
   WRITE_REG(hrng->Instance->HTCR, RNG_HTCR_NIST_VALUE);
+#endif /* RNG_HTCR3_HTCFG */
 #endif /* RNG_HTCR_NIST_VALUE */
 #if defined(RNG_NSCR_NIST_VALUE)
   WRITE_REG(hrng->Instance->NSCR, RNG_NSCR_NIST_VALUE);
