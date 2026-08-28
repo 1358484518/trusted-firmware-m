@@ -40,3 +40,12 @@ set(TFM_CONFIG_FWU_MAX_MANIFEST_SIZE       0            CACHE STRING    "The max
 set(FWU_DEVICE_CONFIG_FILE                 ""           CACHE STRING    "The device configuration file for Firmware Update partition")
 set(DMCUBOOT_UPGRADE_STRATEGY              SWAP_USING_MOVE)
 set(DEFAULT_MCUBOOT_FLASH_MAP             ON            CACHE BOOL     "Whether to use the default flash map defined by TF-M project")
+
+# SPE MCUBoot image version: taken from include/tfm_s_image_version.h
+file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/include/tfm_s_image_version.h"
+     TFM_S_IMAGE_VERSION_LINE
+     REGEX "^[ \t]*#define[ \t]+TFM_S_IMAGE_VERSION_STR")
+string(REGEX REPLACE ".*\"([^\"]+)\".*" "\\1"
+       TFM_S_IMAGE_VERSION_FROM_HEADER "${TFM_S_IMAGE_VERSION_LINE}")
+set(MCUBOOT_IMAGE_VERSION_S "${TFM_S_IMAGE_VERSION_FROM_HEADER}" CACHE STRING
+    "Version number of S image")

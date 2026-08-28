@@ -116,6 +116,19 @@ else
     SEC_CNT="${MCUBOOT_SECURITY_COUNTER_S}"
     DEP="(1, ${MCUBOOT_NS_IMAGE_MIN_VER})"
     SLOT_HINT="S   320KB @ 0x0C038000"
+    for ver_h in \
+        "$KIT/../platform/ext/target/stm/stm32h573i_dk/include/tfm_s_image_version.h" \
+        "$KIT/../../platform/ext/target/stm/stm32h573i_dk/include/tfm_s_image_version.h" \
+        "$KIT/../../../platform/ext/target/stm/stm32h573i_dk/include/tfm_s_image_version.h"
+    do
+        if [[ -f "$ver_h" ]]; then
+            parsed="$(sed -n 's/^#define[[:space:]][[:space:]]*TFM_S_IMAGE_VERSION_STR[[:space:]]*"\([^"]*\)".*/\1/p' "$ver_h")"
+            if [[ -n "$parsed" ]]; then
+                VERSION="$parsed"
+            fi
+            break
+        fi
+    done
 fi
 
 for f in "$LAYOUT" "$KEY" "$KIT/scripts/wrapper.py" "$KIT/bl2/macro_parser.py"; do
