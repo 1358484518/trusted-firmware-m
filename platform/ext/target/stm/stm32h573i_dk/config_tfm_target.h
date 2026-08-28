@@ -8,8 +8,6 @@
 #ifndef __CONFIG_TFM_TARGET_H__
 #define __CONFIG_TFM_TARGET_H__
 
-#include "include/tfm_s_image_version.h"
-
 /* Use stored NV seed to provide entropy */
 #undef CRYPTO_NV_SEED
 #define CRYPTO_NV_SEED                         0
