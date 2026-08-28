@@ -118,6 +118,28 @@
   #include "stm32h5e4xx.h"
 #elif defined(STM32H573xx)
   #include "stm32h5f4xx.h"
+  /*
+   * H5F4 CMSIS FLASH_TypeDef uses WRP11R/WRP21R (plus WRP12R/WRP22R for
+   * sectors 128-255). Older H573 HAL sources still write WRP1R/WRP2R.
+   * Map those member names after the Cube struct, without editing it.
+   */
+  #define WRP1R_PRG  WRP11R_PRG
+  #define WRP1R_CUR  WRP11R_CUR
+  #define WRP2R_PRG  WRP21R_PRG
+  #define WRP2R_CUR  WRP21R_CUR
+  /*
+   * Newer Cube stm32h5xx_hal.c programs SBS analog-switch booster bits.
+   * H5F4 SBS_PMCR does not have them. Keep those APIs as register no-ops
+   * (SET_BIT/CLEAR_BIT with 0; MODIFY_REG mask and setmask both 0).
+   */
+  #if !defined(SBS_PMCR_BOOSTEN)
+  #define SBS_PMCR_BOOSTEN       (0U)
+  #endif
+  #if !defined(SBS_PMCR_BOOSTVDDSEL)
+  #define SBS_PMCR_BOOSTVDDSEL   (0U)
+  #undef  SBS_BOOSTVDDSEL
+  #define SBS_BOOSTVDDSEL        (0U)
+  #endif
 #elif defined(STM32H563xx)
   #include "stm32h563xx.h"
 #elif defined(STM32H562xx)
