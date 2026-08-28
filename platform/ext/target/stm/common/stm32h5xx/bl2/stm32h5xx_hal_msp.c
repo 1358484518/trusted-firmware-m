@@ -136,11 +136,7 @@ const RCC_PeriphCLKInitTypeDef  PeriphClkInitStruct_RTC =
 #if defined(LPTIM6)
     .Lptim6ClockSelection = 0,
 #endif /* LPTIM6 */
-#if defined(RCC_PERIPHCLK_FDCAN12)
-    .Fdcan12ClockSelection = 0,
-#else
-    .FdcanClockSelection = 0,
-#endif /* RCC_PERIPHCLK_FDCAN12 */
+    /* FDCAN clock name differs by HAL version; unused here, leave at zero. */
 #if defined(SAI1)
     .Sai1ClockSelection = 0,
 #endif /* SAI1 */
