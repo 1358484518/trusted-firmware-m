@@ -141,6 +141,10 @@
   #if !defined(SBS_PMCR_BOOSTVDDSEL)
   #define SBS_PMCR_BOOSTVDDSEL   (0U)
   #endif
+  /* Newer HAL pwr_ex.c: IORETREN; CMSIS bit name is IORETEN (same bit 0). */
+  #if !defined(PWR_IORETR_IORETREN)
+  #define PWR_IORETR_IORETREN    PWR_IORETR_IORETEN
+  #endif
 #elif defined(STM32H563xx)
   #include "stm32h563xx.h"
 #elif defined(STM32H562xx)
