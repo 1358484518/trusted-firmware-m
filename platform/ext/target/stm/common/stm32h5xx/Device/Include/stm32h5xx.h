@@ -117,7 +117,45 @@
 #elif defined(STM32H5E4xx)
   #include "stm32h5e4xx.h"
 #elif defined(STM32H573xx)
-  #include "stm32h573xx.h"
+  #include "stm32h5f4xx.h"
+  /*
+   * H5F4 CMSIS FLASH_TypeDef uses WRP11R/WRP21R (plus WRP12R/WRP22R for
+   * sectors 128-255). Older H573 HAL sources still write WRP1R/WRP2R.
+   * Map those member names after the Cube struct, without editing it.
+   */
+  #define WRP1R_PRG  WRP11R_PRG
+  #define WRP1R_CUR  WRP11R_CUR
+  #define WRP2R_PRG  WRP21R_PRG
+  #define WRP2R_CUR  WRP21R_CUR
+  /*
+   * Newer Cube HAL.c uses SBS_PMCR_BOOSTEN / SBS_PMCR_BOOSTVDDSEL.
+   * H5F4 SBS_PMCR does not implement those bits. Define the bit masks
+   * as 0 so SET_BIT/CLEAR_BIT are no-ops.
+   *
+   * Do not #define SBS_BOOSTVDDSEL: newer stm32h5xx_hal.h uses that
+   * identifier as a function parameter name.
+   */
+  #if !defined(SBS_PMCR_BOOSTEN)
+  #define SBS_PMCR_BOOSTEN       (0U)
+  #endif
+  #if !defined(SBS_PMCR_BOOSTVDDSEL)
+  #define SBS_PMCR_BOOSTVDDSEL   (0U)
+  #endif
+  /* Newer HAL pwr_ex.c: IORETREN; CMSIS bit name is IORETEN (same bit 0). */
+  #if !defined(PWR_IORETR_IORETREN)
+  #define PWR_IORETR_IORETREN    PWR_IORETR_IORETEN
+  #endif
+  /* Newer HAL rcc_ex: FDCAN12SEL / USBSEL vs H5F4 FDCANSEL / OTGFSSEL. */
+  #if !defined(RCC_CCIPR5_FDCAN12SEL)
+  #define RCC_CCIPR5_FDCAN12SEL     RCC_CCIPR5_FDCANSEL
+  #define RCC_CCIPR5_FDCAN12SEL_0   RCC_CCIPR5_FDCANSEL_0
+  #define RCC_CCIPR5_FDCAN12SEL_1   RCC_CCIPR5_FDCANSEL_1
+  #endif
+  #if !defined(RCC_CCIPR4_USBSEL)
+  #define RCC_CCIPR4_USBSEL         RCC_CCIPR4_OTGFSSEL
+  #define RCC_CCIPR4_USBSEL_0       RCC_CCIPR4_OTGFSSEL_0
+  #define RCC_CCIPR4_USBSEL_1       RCC_CCIPR4_OTGFSSEL_1
+  #endif
 #elif defined(STM32H563xx)
   #include "stm32h563xx.h"
 #elif defined(STM32H562xx)

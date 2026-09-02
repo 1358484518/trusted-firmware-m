@@ -71,102 +71,14 @@ const  RCC_OscInitTypeDef RCC_OscInitStruct_RTC =
     }
 };
 
+/*
+ * Name only the RTC fields BL2 programs. Unspecified members are implicit-zero,
+ * so this compiles against Cube HAL variants that renamed unused fields
+ * (FdcanClockSelection vs Fdcan12ClockSelection, UsbClockSelection, etc.).
+ */
 const RCC_PeriphCLKInitTypeDef  PeriphClkInitStruct_RTC =
 {
     .PeriphClockSelection = RCC_PERIPHCLK_RTC,
-    .PLL2 = {0},
-#if defined(RCC_CR_PLL3ON)
-    .PLL3 = {0},
-#endif /* RCC_CR_PLL3ON */
-    .CkperClockSelection = 0,
-    .Usart1ClockSelection = 0,
-    .Usart2ClockSelection = 0,
-    .Usart3ClockSelection = 0,
-#if defined(UART4)
-    .Uart4ClockSelection = 0,
-#endif /* UART4 */
-#if defined(UART5)
-    .Uart5ClockSelection = 0,
-#endif /* UART5 */
-#if defined(USART6)
-    .Usart6ClockSelection = 0,
-#endif /* UART6 */
-#if defined(UART7)
-    .Uart7ClockSelection = 0,
-#endif /* UART7 */
-#if defined(UART8)
-    .Uart8ClockSelection = 0,
-#endif /* UART8 */
-#if defined(UART9)
-    .Uart9ClockSelection = 0,
-#endif /* UART9 */
-#if defined(USART10)
-    .Usart10ClockSelection = 0,
-#endif /* UART10 */
-#if defined(USART11)
-    .Usart11ClockSelection = 0,
-#endif /* UART11 */
-#if defined(USART12)
-    .Uart12ClockSelection = 0,
-#endif /* UART12 */
-    .Lpuart1ClockSelection = 0,
-    .I2c1ClockSelection = 0,
-    .I2c2ClockSelection = 0,
-#if defined(I2C3)
-    .I2c3ClockSelection = 0,
-#endif /* I2C3 */
-#if defined(I2C4)
-    .I2c4ClockSelection = 0,
-#endif /* I2C4 */
-    .I3c1ClockSelection = 0,
-#if defined(I3C2)
-    .I3c2ClockSelection = 0,
-#endif /* I3C2 */
-    .Lptim1ClockSelection = 0,
-    .Lptim2ClockSelection = 0,
-#if defined(LPTIM3)
-    .Lptim3ClockSelection = 0,
-#endif /* LPTIM3 */
-#if defined(LPTIM4)
-    .Lptim4ClockSelection = 0,
-#endif /* LPTIM4 */
-#if defined(LPTIM5)
-    .Lptim5ClockSelection = 0,
-#endif /* LPTIM5 */
-#if defined(LPTIM6)
-    .Lptim6ClockSelection = 0,
-#endif /* LPTIM6 */
-    .FdcanClockSelection = 0,
-#if defined(SAI1)
-    .Sai1ClockSelection = 0,
-#endif /* SAI1 */
-#if defined(SAI2)
-    .Sai2ClockSelection = 0,
-#endif /* SAI2 */
-    .RngClockSelection = 0,
-#if defined(SDMMC1)
-    .Sdmmc1ClockSelection = 0,
-#endif /* SDMMC1 */
-#if defined(SDMMC2)
-    .Sdmmc2ClockSelection = 0,
-#endif /* SDMMC2 */
-    .AdcDacClockSelection = 0,
-    .DacLowPowerClockSelection = 0,
-#if defined(OCTOSPI1)
-    .OspiClockSelection = 0,
-#endif
-    .Spi1ClockSelection = 0,
-    .Spi2ClockSelection = 0,
-    .Spi3ClockSelection = 0,
-#if defined(SPI4)
-    .Spi4ClockSelection = 0,
-#endif /* SPI4 */
-#if defined(SPI5)
-    .Spi5ClockSelection = 0,
-#endif /* SPI5 */
-#if defined(SPI6)
-    .Spi6ClockSelection = 0,
-#endif /* SPI6 */
 #if defined(RTC_CLOCK_SOURCE_LSE)
     .RTCClockSelection = RCC_RTCCLKSOURCE_LSE,
 #elif defined (RTC_CLOCK_SOURCE_LSI)
@@ -174,11 +86,6 @@ const RCC_PeriphCLKInitTypeDef  PeriphClkInitStruct_RTC =
 #else
 #error
 #endif /* RTC_CLOCK_SOURCE_LSE */
-#if defined(CEC)
-    .CecClockSelection = 0,
-#endif /* CEC */
-    .UsbClockSelection = 0,
-    .TimPresSelection = 0
 };
 /**
   * @}
